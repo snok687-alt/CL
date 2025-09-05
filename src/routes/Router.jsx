@@ -4,6 +4,8 @@ import Dashboard from '../components/Dashboard';
 import VideoPlayer from '../pages/VideoPlayer';
 import VideoGrid from '../pages/VideoGrid';
 import SearchResults from '../pages/SearchResults';
+import ProfilePage from '../helpers/ProfilePage';
+import ProfileCarousel from '../helpers/ProfileCarousel';
 
 const Router = () => {
   return (
@@ -45,7 +47,12 @@ const Router = () => {
           <Route path="category/68" element={<VideoGrid title="精品" filter="all" />} />
           <Route path="search" element={<SearchResults />} />
           <Route path="watch/:videoId" element={<VideoPlayer />} />
-          
+
+          {/* Profile */}
+          {/* Route สำหรับโปรไฟล์ */}
+          <Route path="/profiles/:id" element={<ProfilePage />} />
+          {/* Route สำหรับทดสอบ (สามารถลบได้) */}
+          <Route path="/test-profiles" element={<ProfileCarousel />} />
         </Route>
       </Routes>
     </BrowserRouter>

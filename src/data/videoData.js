@@ -65,7 +65,8 @@ const chunkArray = (array, chunkSize) => {
 };
 
 // ฟังก์ชันดึงข้อมูลวิดีโอจาก API - ปรับปรุงแล้ว
-export const fetchVideosFromAPI = async (category = '', searchQuery = '', limit = 20) => {
+// ฟังก์ชันดึงข้อมูลวิดีโอจาก API - เพิ่มพารามิเตอร์ page
+export const fetchVideosFromAPI = async (category = '', searchQuery = '', limit = 20, page = 1) => {
   try {
     let url = '/api/provide/vod/?ac=list';
     const params = [];
@@ -77,6 +78,9 @@ export const fetchVideosFromAPI = async (category = '', searchQuery = '', limit 
     if (searchQuery) {
       params.push(`wd=${encodeURIComponent(searchQuery)}`);
     }
+    
+    // เพิ่ม pagination parameter
+    params.push(`pg=${page}`);
     
     // เพิ่ม limit parameter
     params.push(`limit=${limit}`);
@@ -110,65 +114,8 @@ export const fetchVideosFromAPI = async (category = '', searchQuery = '', limit 
       return [];
     }
     
-    // แบ่ง ID เป็นชุดๆ ละ 5 ID (ลดลงเพื่อความเสถียร)
-    const idChunks = chunkArray(vodIds, 5);
-    const allDetailedVideos = [];
-    
-    for (const [index, idChunk] of idChunks.entries()) {
-      try {
-        console.log(`Processing chunk ${index + 1}/${idChunks.length}:`, idChunk);
-        
-        const batchVideos = await fetchBatchVideoDetails(idChunk);
-        if (batchVideos.length > 0) {
-          allDetailedVideos.push(...batchVideos);
-        }
-        
-        // เพิ่ม delay ระหว่าง batch เพื่อไม่ให้ server ล้น
-        if (index < idChunks.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 500));
-        }
-        
-      } catch (error) {
-        console.error(`Error in batch ${index + 1}, falling back to individual requests:`, error);
-        
-        // หาก batch request ล้มเหลว ให้ลองทีละตัว
-        for (const id of idChunk) {
-          try {
-            const individualVideo = await getVideoById(id);
-            if (individualVideo) {
-              allDetailedVideos.push(individualVideo);
-            }
-            
-            // เพิ่ม delay ระหว่าง individual request
-            await new Promise(resolve => setTimeout(resolve, 200));
-            
-          } catch (individualError) {
-            console.error(`Failed to get details for video ${id}:`, individualError);
-            
-            // เพิ่มข้อมูลพื้นฐานหากดึง detail ไม่ได้
-            const basicItem = limitedVideos.find(item => item.vod_id === id);
-            if (basicItem) {
-              allDetailedVideos.push({
-                id: basicItem.vod_id,
-                title: basicItem.vod_name || 'ไม่มีชื่อ',
-                channelName: basicItem.vod_director || basicItem.type_name || 'ไม่ระบุ',
-                views: parseInt(basicItem.vod_hits) || 0,
-                duration: parseInt(basicItem.vod_duration) || 0,
-                uploadDate: basicItem.vod_year || basicItem.vod_time || 'ไม่ระบุ',
-                thumbnail: basicItem.vod_pic || 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=640&h=360&fit=crop',
-                videoUrl: basicItem.vod_play_url || '',
-                description: basicItem.vod_content || 'ไม่มีคำอธิบาย',
-                category: basicItem.type_name || basicItem.vod_class || 'ทั่วไป',
-                rawData: basicItem
-              });
-            }
-          }
-        }
-      }
-    }
-    
-    console.log('Total detailed videos fetched:', allDetailedVideos.length);
-    return allDetailedVideos;
+    // ดึงรายละเอียดวิดีโอ
+    return await fetchBatchVideoDetails(vodIds);
     
   } catch (error) {
     console.error('Error fetching videos from API:', error);
@@ -826,6 +773,7 @@ export const getRelatedVideos = async (currentVideoId, currentVideoCategory, cur
 };
 
 // ฟังก์ชันใหม่: ดึงวิดีโอเพิ่มเติมในหมวดหมู่เดียวกัน (สำหรับ infinite scroll)
+// ฟังก์ชันสำหรับดึงวิดีโอเพิ่มเติมในหมวดหมู่เดียวกัน
 export const getMoreVideosInCategory = async (categoryName, excludeIds = [], page = 1, limit = 12) => {
   try {
     if (!categoryName || categoryName.trim() === '') {
@@ -834,127 +782,46 @@ export const getMoreVideosInCategory = async (categoryName, excludeIds = [], pag
 
     console.log(`Getting more videos in category: ${categoryName}, page: ${page}`);
     
-    const seenIds = new Set(excludeIds);
-    let foundVideos = [];
-
-    // หา type_id ที่ตรงกับหมวดหมู่
-    const getTypeId = (category) => {
-      const categoryMap = {
-        '伦理片': '20',
-        '悬疑片': '40',
-        '战争片': '41',
-        '犯罪片': '42',
-        '剧情片': '43',
-        '恐怖片': '44',
-        '科幻片': '45',
-        '爱情片': '46',
-        '喜剧片': '47',
-        '动作片': '48',
-        '奇幻片': '49',
-        '冒险片': '50',
-        '惊悚片': '51',
-        '动画片': '52',
-        '记录片': '53'
-      };
-      return categoryMap[category];
-    };
-
-    const typeId = getTypeId(categoryName);
+    // ใช้ categoryName เป็น parameter โดยตรง
+    const response = await retryRequest(
+      () => axios.get(`/api/provide/vod/?ac=list&t=${encodeURIComponent(categoryName)}&pg=${page}&limit=${limit * 3}`),
+      2,
+      1000
+    );
     
-    // ลองหลายวิธีในการค้นหา
-    const strategies = [
-      typeId ? `t=${typeId}` : null,
-      `t=${encodeURIComponent(categoryName)}`,
-      `wd=${encodeURIComponent(categoryName)}`
-    ].filter(Boolean);
-
-    for (const strategy of strategies) {
-      if (foundVideos.length >= limit) break;
+    const videoList = response.data?.list || [];
+    console.log(`Category ${categoryName} page ${page} found: ${videoList.length} videos`);
+    
+    if (videoList.length === 0) {
+      return { videos: [], hasMore: false };
+    }
+    
+    // กรองวิดีโอที่ไม่ได้อยู่ในหมวดหมู่เดียวกันและวิดีโอที่ยกเว้น
+    const filteredVideos = videoList.filter(item => {
+      if (!item.vod_id) return false;
+      if (excludeIds.includes(item.vod_id)) return false;
       
-      try {
-        console.log(`Trying strategy: ${strategy} on page ${page}`);
-        
-        const response = await retryRequest(
-          () => axios.get(`/api/provide/vod/?ac=list&${strategy}&pg=${page}&limit=${limit * 2}`),
-          2,
-          1000
-        );
-        
-        const videoList = response.data?.list || [];
-        console.log(`Strategy found ${videoList.length} videos on page ${page}`);
-        
-        if (videoList.length > 0) {
-          // กรองเฉพาะวิดีโอที่ยังไม่เห็นและอยู่ในหมวดหมู่เดียวกัน
-          const filteredVideos = videoList.filter(item => {
-            if (!item.vod_id || seenIds.has(item.vod_id)) return false;
-            const itemCategory = item.type_name || item.vod_class || '';
-            return itemCategory === categoryName;
-          });
-          
-          const idsToFetch = filteredVideos
-            .slice(0, limit - foundVideos.length)
-            .map(item => {
-              seenIds.add(item.vod_id);
-              return item.vod_id;
-            });
-          
-          if (idsToFetch.length > 0) {
-            const batchVideos = await fetchBatchVideoDetails(idsToFetch);
-            const sameCategoryVideos = batchVideos.filter(video => 
-              video.category === categoryName || 
-              video.rawData?.type_name === categoryName
-            );
-            
-            foundVideos.push(...sameCategoryVideos);
-            console.log(`Added ${sameCategoryVideos.length} videos from strategy`);
-          }
-        }
-        
-        // หากได้วิดีโอครบแล้ว หยุดลองกลยุทธ์อื่น
-        if (foundVideos.length >= limit) break;
-        
-      } catch (error) {
-        console.warn(`Strategy failed: ${strategy}`, error.message);
-      }
+      // ตรวจสอบว่าอยู่ในหมวดหมู่เดียวกัน
+      const itemCategory = item.type_name || item.vod_class || '';
+      return itemCategory === categoryName;
+    });
+    
+    // จำกัดจำนวนตาม limit
+    const limitedVideos = filteredVideos.slice(0, limit);
+    
+    if (limitedVideos.length === 0) {
+      return { videos: [], hasMore: videoList.length >= limit * 3 };
     }
-
-    // ตรวจสอบว่ามีข้อมูลเพิ่มเติมหรือไม่ (ลองดูหน้าถัดไป)
-    let hasMore = false;
-    if (foundVideos.length > 0) {
-      try {
-        const typeId = getTypeId(categoryName);
-        const checkStrategy = typeId ? `t=${typeId}` : `t=${encodeURIComponent(categoryName)}`;
-        
-        const nextPageResponse = await retryRequest(
-          () => axios.get(`/api/provide/vod/?ac=list&${checkStrategy}&pg=${page + 1}&limit=1`),
-          1,
-          500
-        );
-        
-        const nextPageList = nextPageResponse.data?.list || [];
-        hasMore = nextPageList.length > 0;
-      } catch (error) {
-        console.warn('Could not check for more pages:', error.message);
-        hasMore = foundVideos.length >= limit; // ถ้าได้ครบตามที่ขอ อาจมีเพิ่ม
-      }
-    }
-
-    // เรียงลำดับตามความเกี่ยวข้อง
-    const sortedVideos = foundVideos
-      .filter((video, index, self) => 
-        video && video.id && self.findIndex(v => v.id === video.id) === index
-      )
-      .sort((a, b) => {
-        const viewsA = parseInt(a.views) || 0;
-        const viewsB = parseInt(b.views) || 0;
-        return viewsB - viewsA;
-      })
-      .slice(0, limit);
-
-    console.log(`Found ${sortedVideos.length} more videos in category: ${categoryName}, hasMore: ${hasMore}`);
+    
+    // ดึงรายละเอียดวิดีโอ
+    const vodIds = limitedVideos.map(item => item.vod_id);
+    const detailedVideos = await fetchBatchVideoDetails(vodIds);
+    
+    // ตรวจสอบว่ามีหน้าถัดไปหรือไม่
+    const hasMore = videoList.length >= limit * 3;
     
     return {
-      videos: sortedVideos,
+      videos: detailedVideos,
       hasMore: hasMore
     };
 
@@ -1016,6 +883,292 @@ export const checkAPIStatus = async () => {
       status: 'error',
       error: error.message
     };
+  }
+};
+
+// ในไฟล์ videoData.js - เพิ่มฟังก์ชันนี้
+export const getAllVideosByCategory = async (categoryId, limit = 0) => {
+  try {
+    console.log('Getting all videos for category:', categoryId);
+    
+    // ใช้ฟังก์ชันที่มีอยู่แล้ว
+    if (limit > 0) {
+      // ถ้ามี limit ให้ใช้ฟังก์ชันปกติ
+      return await getVideosByCategory(categoryId, limit);
+    }
+    
+    // ถ้า limit เป็น 0 ให้ดึงทั้งหมดโดยการไล่ดูหลายหน้า
+    let allVideos = [];
+    let page = 1;
+    let hasMore = true;
+    
+    while (hasMore) {
+      try {
+        // ใช้ getMoreVideosInCategory เพื่อดึงข้อมูลทีละหน้า
+        const result = await getMoreVideosInCategory(
+          categoryId, 
+          allVideos.map(v => v.id), 
+          page, 
+          50 // ดึงทีละ 50 วิดีโอ
+        );
+        
+        if (result.videos.length > 0) {
+          allVideos = [...allVideos, ...result.videos];
+          hasMore = result.hasMore;
+          page++;
+          
+          // หยุดชั่วคราวระหว่างหน้าเพื่อไม่ให้ server ล้น
+          await new Promise(resolve => setTimeout(resolve, 300));
+        } else {
+          hasMore = false;
+        }
+      } catch (error) {
+        console.error(`Error loading page ${page} for category ${categoryId}:`, error);
+        hasMore = false;
+      }
+    }
+    
+    console.log(`Loaded ${allVideos.length} videos for category ${categoryId}`);
+    return allVideos;
+    
+  } catch (error) {
+    console.error('Error getting all videos by category:', error);
+    return [];
+  }
+};
+
+
+// ใน videoData.js - เพิ่มฟังก์ชันเหล่านี้
+
+// ฟังก์ชันดึงวิดีโอโดยผู้สร้างเฉพาะ
+export const getVideosByCreator = async (creatorName, limit = 20) => {
+  try {
+    console.log('Searching videos by creator:', creatorName);
+    
+    // ค้นหาจากชื่อผู้สร้างในฟิลด์ vod_director
+    const response = await retryRequest(
+      () => axios.get(`/api/provide/vod/?ac=list&wd=${encodeURIComponent(creatorName)}&limit=${limit * 2}`),
+      2,
+      1000
+    );
+    
+    const videoList = response.data?.list || [];
+    console.log('Found', videoList.length, 'potential videos by creator');
+    
+    if (videoList.length === 0) return [];
+    
+    // กรองเฉพาะวิดีโอที่ผู้สร้างตรงกัน
+    const filteredVideos = videoList.filter(item => {
+      const director = item.vod_director || '';
+      return director.includes(creatorName);
+    });
+    
+    const vodIds = filteredVideos
+      .slice(0, limit)
+      .map(item => item.vod_id)
+      .filter(Boolean);
+    
+    if (vodIds.length === 0) return [];
+    
+    return await fetchBatchVideoDetails(vodIds);
+  } catch (error) {
+    console.error('Error fetching videos by creator:', error);
+    return [];
+  }
+};
+
+// ฟังก์ชันดึงข้อมูลโปรไฟล์จากวิดีโอ
+export const getProfilesFromVideos = async (limit = 20) => {
+  try {
+    // ดึงวิดีโอล่าสุด
+    const videos = await getAllVideos(50);
+    
+    // สกัดชื่อผู้สร้างจากวิดีโอ
+    const creators = [...new Set(
+      videos
+        .map(video => video.channelName)
+        .filter(name => name && name !== 'ไม่ระบุ')
+    )].slice(0, limit);
+    
+    // สร้างโปรไฟล์จากผู้สร้าง
+    const profiles = creators.map((creator, index) => {
+      // สุ่ม rating
+      const rating = (4 + Math.random()).toFixed(1);
+      
+      return {
+        id: index + 1,
+        name: creator,
+        image: `https://ui-avatars.com/api/?name=${encodeURIComponent(creator)}&background=random`,
+        rating: rating,
+        description: `ผู้สร้างเนื้อหาในแพลตฟอร์ม`,
+        email: `contact${index + 1}@example.com`,
+        phone: `08${Math.floor(10000000 + Math.random() * 90000000)}`,
+        location: 'ประเทศไทย',
+        category: creator
+      };
+    });
+    
+    return profiles;
+  } catch (error) {
+    console.error('Error generating profiles from videos:', error);
+    return [];
+  }
+};
+
+// ใน videoData.js - เพิ่มฟังก์ชันเหล่านี้
+
+// ฟังก์ชันดึงวิดีโอเฉพาะจากหมวดหมู่ 20
+export const getVideosByCategory20 = async (limit = 20) => {
+  try {
+    console.log('Fetching videos from category 20...');
+    
+    const response = await retryRequest(
+      () => axios.get(`/api/provide/vod/?ac=list&t=20&limit=${limit}`),
+      2,
+      1000
+    );
+    
+    const videoList = response.data?.list || [];
+    console.log('Found', videoList.length, 'videos in category 20');
+    
+    if (videoList.length === 0) return [];
+    
+    const vodIds = videoList
+      .map(item => item.vod_id)
+      .filter(Boolean);
+    
+    if (vodIds.length === 0) return [];
+    
+    return await fetchBatchVideoDetails(vodIds);
+  } catch (error) {
+    console.error('Error fetching videos from category 20:', error);
+    return [];
+  }
+};
+
+// ฟังก์ชันดึงวิดีโอทั้งหมดจากหมวดหมู่ 20
+export const getAllVideosByCategory20 = async (limit = 0) => {
+  try {
+    console.log('Getting all videos for category 20...');
+    
+    let allVideos = [];
+    let page = 1;
+    let hasMore = true;
+    const usedThumbnails = new Set(); // เก็บ thumbnail ที่ใช้แล้ว
+    
+    while (hasMore && (limit === 0 || allVideos.length < limit)) {
+      try {
+        const response = await retryRequest(
+          () => axios.get(`/api/provide/vod/?ac=list&t=20&pg=${page}&limit=50`),
+          2,
+          1000
+        );
+        
+        const videoList = response.data?.list || [];
+        
+        if (videoList.length === 0) {
+          hasMore = false;
+          break;
+        }
+        
+        // ดึงรายละเอียดวิดีโอ
+        const vodIds = videoList.map(item => item.vod_id).filter(Boolean);
+        const detailedVideos = await fetchBatchVideoDetails(vodIds);
+        
+        // กรองวิดีโอที่ thumbnail ไม่ซ้ำ
+        const uniqueVideos = detailedVideos.filter(video => {
+          if (!video.thumbnail || usedThumbnails.has(video.thumbnail)) {
+            return false;
+          }
+          usedThumbnails.add(video.thumbnail);
+          return true;
+        });
+        
+        allVideos = [...allVideos, ...uniqueVideos];
+        
+        if (videoList.length < 50) {
+          hasMore = false;
+        }
+        
+        page++;
+        
+        // หยุดชั่วคราวระหว่างหน้าเพื่อไม่ให้ server ล้น
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+      } catch (error) {
+        console.error(`Error loading page ${page} for category 20:`, error);
+        hasMore = false;
+      }
+    }
+    
+    // จำกัดจำนวนตาม limit
+    if (limit > 0) {
+      allVideos = allVideos.slice(0, limit);
+    }
+    
+    console.log(`Loaded ${allVideos.length} unique videos for category 20`);
+    return allVideos;
+    
+  } catch (error) {
+    console.error('Error getting all videos by category 20:', error);
+    return [];
+  }
+};
+
+// ฟังก์ชันค้นหาวิดีโอโดยนักแสดงในหมวดหมู่ 20
+export const searchVideosByActorInCategory20 = async (actorName, limit = 20) => {
+  try {
+    console.log('Searching videos by actor in category 20:', actorName);
+    
+    // ค้นหาจากชื่อนักแสดงในหมวดหมู่ 20
+    const response = await retryRequest(
+      () => axios.get(`/api/provide/vod/?ac=list&t=20&wd=${encodeURIComponent(actorName)}`),
+      2,
+      1000
+    );
+    
+    const videoList = response.data?.list || [];
+    console.log('Found', videoList.length, 'videos for actor in category 20:', actorName);
+    
+    if (videoList.length === 0) return [];
+    
+    // กรองเฉพาะวิดีโอที่มีนักแสดงตรงกัน
+    const filteredVideos = videoList.filter(item => {
+      const actorFields = [
+        item.vod_actor,
+        item.vod_director,
+        item.vod_douban_actor,
+        item.vod_douban_director
+      ];
+      
+      return actorFields.some(field => 
+        field && field.includes(actorName)
+      );
+    });
+    
+    const vodIds = filteredVideos
+      .slice(0, limit)
+      .map(item => item.vod_id)
+      .filter(Boolean);
+    
+    if (vodIds.length === 0) return [];
+    
+    const detailedVideos = await fetchBatchVideoDetails(vodIds);
+    
+    // กรองวิดีโอที่ thumbnail ไม่ซ้ำ
+    const usedThumbnails = new Set();
+    const uniqueVideos = detailedVideos.filter(video => {
+      if (!video.thumbnail || usedThumbnails.has(video.thumbnail)) {
+        return false;
+      }
+      usedThumbnails.add(video.thumbnail);
+      return true;
+    });
+    
+    return uniqueVideos;
+  } catch (error) {
+    console.error('Error searching videos by actor in category 20:', error);
+    return [];
   }
 };
 

@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import Cat from '../../public/you.jpg';
 import Navbar from './Navbar';
 import SearchBox from './SearchBox';
+import ProfileCarousel from '../helpers/ProfileCarousel'
 
 const Header = ({ searchTerm, onSearchChange, isDarkMode, toggleTheme, isVisible }) => {
   const navigate = useNavigate();
@@ -45,8 +46,6 @@ const Header = ({ searchTerm, onSearchChange, isDarkMode, toggleTheme, isVisible
   const handleCategoryClick = (path) => {
     navigate(path);
   };
-
-
 
   return (
     <header 
@@ -104,6 +103,7 @@ const Header = ({ searchTerm, onSearchChange, isDarkMode, toggleTheme, isVisible
           isDarkMode={isDarkMode}
         />
       </div>
+        <ProfileCarousel/>
     </header>
   );
 };

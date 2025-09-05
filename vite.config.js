@@ -8,6 +8,8 @@ export default defineConfig({
     react()
   ],
   server: {
+    host: true, // <--- สำคัญมาก สำหรับให้มือถือเข้าได้
+    port: 5173, // หรือจะกำหนดเอง เช่น 3000
     proxy: {
       '/api': {
         target: 'https://ckzy.me',
