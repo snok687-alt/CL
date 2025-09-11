@@ -5,7 +5,8 @@ const ProfileCard = ({ profile }) => {
   const navigate = useNavigate();
 
   const handleClick = () => {
-    navigate(`/profiles/${profile.id}`);
+    // เปลี่ยนเส้นทางไปยังหน้าแสดงวิดีโอของนักแสดง
+    navigate(`/actor/${encodeURIComponent(profile.name)}`);
   };
 
   return (

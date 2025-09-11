@@ -18,7 +18,7 @@ const VideoPlayer = () => {
   const [videoLoading, setVideoLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showFullDescription, setShowFullDescription] = useState(false);
-  
+
   // Related videos infinite scroll
   const [relatedLoading, setRelatedLoading] = useState(false);
   const [relatedPage, setRelatedPage] = useState(1);
@@ -44,7 +44,7 @@ const VideoPlayer = () => {
   // Process video URL
   const processVideoUrl = useCallback((playUrl) => {
     if (!playUrl) return null;
-    
+
     const patterns = [
       /(https?:\/\/[^$]+\.m3u8[^$]*)/i,
       /(https?:\/\/[^$]+\.mp4[^$]*)/i,
@@ -121,16 +121,16 @@ const VideoPlayer = () => {
     }
   }, []);
 
-  // Load more related videos
+  // Load more related videos - แก้ไขฟังก์ชันนี้
   const loadMoreRelated = useCallback(async () => {
-    if (relatedLoading || !hasMoreRelated || !video) return;
+    if (relatedLoading || !hasMoreRelated || !video?.type_id) return;
 
     setRelatedLoading(true);
     const nextPage = relatedPage + 1;
 
     try {
       const result = await getMoreVideosInCategory(
-        video.category,
+        video.type_id,
         relatedVideos.map(v => v.id),
         nextPage,
         12
@@ -145,6 +145,7 @@ const VideoPlayer = () => {
       }
     } catch (error) {
       console.error('Error loading more related videos:', error);
+      setHasMoreRelated(false);
     } finally {
       setRelatedLoading(false);
     }
@@ -187,7 +188,7 @@ const VideoPlayer = () => {
 
         const videoUrl = processVideoUrl(videoData.videoUrl || videoData.rawData?.vod_play_url);
         setVideo({ ...videoData, videoUrl });
-        
+
         if (videoUrl) {
           setTimeout(() => loadVideo(videoUrl), 100);
         } else {
@@ -210,14 +211,30 @@ const VideoPlayer = () => {
     };
   }, [videoId, processVideoUrl, loadVideo]);
 
-  // Fetch related videos
+  // Fetch related videos - แก้ไข useEffect นี้
   useEffect(() => {
     const fetchRelated = async () => {
-      if (!video?.id || !video?.category) return;
+      if (!video?.id || !video?.type_id) {
+        return;
+      }
 
       try {
-        const related = await getRelatedVideos(video.id, video.category, video.title, 12);
-        setRelatedVideos(related);
+        // โหลด 12 วิดีโอแรกจากหมวดหมู่เดียวกัน
+        const initialRelated = await getMoreVideosInCategory(
+          video.type_id,
+          [video.id], // ไม่รวมวิดีโอปัจจุบัน
+          1, // หน้าแรก
+          13 // โหลด 13 เพื่อให้ได้ 12 หลังกรอง
+        );
+
+        // กรองวิดีโอปัจจุบันออก
+        const filteredRelated = initialRelated.videos
+          .filter(relatedVideo => relatedVideo.id !== video.id)
+          .slice(0, 12);
+
+        setRelatedVideos(filteredRelated);
+        setHasMoreRelated(initialRelated.hasMore);
+        setRelatedPage(1);
       } catch (error) {
         console.error('Error loading related videos:', error);
       }
@@ -234,7 +251,7 @@ const VideoPlayer = () => {
     const cleanText = removeHtmlTags(text);
     return cleanText.length <= maxLength ? cleanText : cleanText.substring(0, maxLength) + '...';
   };
-  
+
   const handleVideoClick = useCallback((clickedVideo) => {
     navigate(`/watch/${clickedVideo.id}`);
   }, [navigate]);
@@ -242,11 +259,11 @@ const VideoPlayer = () => {
   // Loading state
   if (loading) {
     return (
-      <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-gray-100'} p-4`}>
+      <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-gray-100'}`}>
         <div className="max-w-full mx-auto md:mt-4">
           <div className="flex flex-col lg:flex-row gap-4">
             <div className="w-full lg:w-2/3 space-y-4">
-              <div className="relative w-full aspect-video bg-gray-800 animate-pulse rounded-lg" />
+              <div className="relative w-full aspect-video bg-gray-800 animate-pulse" />
               <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
                 <div className="h-6 bg-gray-700 rounded w-3/4 mb-4 animate-pulse" />
                 <div className="flex gap-2 items-center mb-2">
@@ -257,10 +274,10 @@ const VideoPlayer = () => {
               </div>
             </div>
             <div className="w-full lg:w-1/3">
-              <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+              <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
                 <div className="h-6 w-2/3 mb-4 bg-gray-600 rounded animate-pulse" />
-                <div className="grid grid-cols-2 gap-2">
-                  {Array.from({ length: 6 }).map((_, idx) => (
+                <div className="grid grid-cols-3 gap-2">
+                  {Array.from({ length: 12 }).map((_, idx) => (
                     <div key={idx} className="space-y-2 animate-pulse">
                       <div className="aspect-video bg-gray-700 rounded" />
                       <div className="h-3 w-5/6 bg-gray-600 rounded" />
@@ -278,11 +295,10 @@ const VideoPlayer = () => {
   // Error state
   if (error || !video) {
     return (
-      <div className={`min-h-screen flex flex-col items-center justify-center p-4 ${
-        isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-black'
-      }`}>
+      <div className={`min-h-screen flex flex-col items-center justify-center p-4 ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-black'
+        }`}>
         <svg className="w-16 h-16 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} 
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
             d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
         <p className="text-lg mb-4">{error || 'ไม่พบวีดีโอนี้'}</p>
@@ -290,7 +306,7 @@ const VideoPlayer = () => {
           onClick={() => navigate('/')}
           className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
         >
-          กลับไปหน้าหลัก
+          Back
         </button>
       </div>
     );
@@ -329,7 +345,7 @@ const VideoPlayer = () => {
             {/* Video Info */}
             <div className={`mt-4 p-4 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
               <h1 className="text-xl md:text-2xl font-bold mb-2">{video.title}</h1>
-              
+
               <div className="flex flex-wrap items-center text-sm mb-2">
                 <span className="mr-3">{video.channelName}</span>
                 <span className="mr-3">•</span>
@@ -337,9 +353,8 @@ const VideoPlayer = () => {
                 <span className="mx-3">•</span>
                 <span>{video.uploadDate}</span>
                 <span className="mx-3">•</span>
-                <span className={`px-2 py-1 rounded-full text-xs ${
-                  isDarkMode ? 'bg-gray-700' : 'bg-gray-200'
-                }`}>
+                <span className={`px-2 py-1 rounded-full text-xs ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'
+                  }`}>
                   {video.category}
                 </span>
               </div>
@@ -355,9 +370,8 @@ const VideoPlayer = () => {
                 {shouldTruncate && (
                   <button
                     onClick={() => setShowFullDescription(!showFullDescription)}
-                    className={`text-sm font-medium ${
-                      isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-500'
-                    } transition-colors`}
+                    className={`text-sm font-medium ${isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-500'
+                      } transition-colors`}
                   >
                     {showFullDescription ? 'แสดงน้อยลง' : 'แสดงเพิ่มเติม'}
                   </button>
@@ -369,15 +383,14 @@ const VideoPlayer = () => {
           {/* Related Videos Section */}
           <div className="w-full lg:w-1/3">
             <div className={`rounded-lg ${isDarkMode ? 'bg-gray-800 lg:bg-transparent' : 'bg-white lg:bg-transparent'}`}>
-              <h3 className={`text-xl font-bold mb-1 py-3 pl-2 sticky top-0 ${
-                isDarkMode ? 'bg-gradient-to-r from-gray-900 to-transparent' : 'bg-gradient-to-r from-gray-100 to-transparent'
-              }`}>
+              <h3 className={`text-xl font-bold mb-1 py-3 pl-2 sticky top-0 ${isDarkMode ? 'bg-gradient-to-r from-gray-900 to-transparent' : 'bg-gradient-to-r from-gray-100 to-transparent'
+                }`}>
                 วิดีโอที่เกี่ยวข้อง ({relatedVideos.length}+)
               </h3>
 
               <div
                 ref={relatedContainerRef}
-                className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-screen px-2 overflow-y-auto"
+                className="grid grid-cols-3 md:grid-cols-3 gap-2 max-h-screen px-2 overflow-y-auto"
               >
                 {relatedVideos.map((relatedVideo, index) => (
                   <div key={`${relatedVideo.id}-${index}`} className="transform transition-transform duration-300 hover:scale-105">
@@ -391,11 +404,31 @@ const VideoPlayer = () => {
 
                 {/* Loading indicator */}
                 {relatedLoading && (
-                  <div className="col-span-2 md:col-span-3 flex justify-center items-center py-4">
-                    <div className="flex flex-col items-center">
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-current mb-2"></div>
-                      <p className="text-sm">กำลังโหลดเพิ่มเติม...</p>
-                    </div>
+                  <>
+                    {Array.from({ length: 12 }).map((_, idx) => (
+                      <div key={`loading-${idx}`} className="animate-pulse space-y-2">
+                        <div className="aspect-video bg-gray-700 rounded" />
+                        <div className="h-3 w-5/6 bg-gray-600 rounded" />
+                      </div>
+                    ))}
+                  </>
+                )}
+
+                {/* End of related videos message */}
+                {!hasMoreRelated && relatedVideos.length > 0 && (
+                  <div className="col-span-2 md:col-span-3 text-center py-4">
+                    <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      โหลดวิดีโอครบทั้งหมดแล้ว
+                    </p>
+                  </div>
+                )}
+
+                {/* No related videos message */}
+                {relatedVideos.length === 0 && !relatedLoading && (
+                  <div className="col-span-2 md:col-span-3 text-center py-8">
+                    <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      ไม่มีวิดีโอที่เกี่ยวข้องในขณะนี้
+                    </p>
                   </div>
                 )}
               </div>

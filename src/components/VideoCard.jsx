@@ -29,7 +29,7 @@ const VideoCard = ({ video, onClick, isDarkMode }) => {
         }`}
       onClick={handleVideoClick}
     >
-      <div className="relative aspect-[3/4] bg-gray-700 overflow-hidden">
+      <div className="relative aspect-[16/9] bg-gray-700 overflow-hidden">
         <img
           src={video.thumbnail}
           alt={video.title}

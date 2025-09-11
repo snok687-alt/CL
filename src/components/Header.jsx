@@ -9,40 +9,27 @@ const Header = ({ searchTerm, onSearchChange, isDarkMode, toggleTheme, isVisible
   const navigate = useNavigate();
   const location = useLocation();
 
-  // หมวดหมู่ตามข้อมูลจาก API
   const categories = [
-    { id: 'all', name: 'Home', path: '/' },
-    { id: '20', name: '巨乳', path: '/category/20' },
-    { id: '40', name: '自拍', path: '/category/40' },
-    { id: '41', name: '偷情', path: '/category/41' },
-    { id: '42', name: '偷拍', path: '/category/42' },
-    { id: '43', name: '萝莉', path: '/category/43' },
-    { id: '44', name: '动漫', path: '/category/44' },
-    { id: '45', name: '强奸', path: '/category/45' },
-    { id: '46', name: '迷奸', path: '/category/46' },
-    { id: '47', name: '乱伦', path: '/category/47' },
-    { id: '48', name: '虐待', path: '/category/48' },
-    { id: '49', name: '网红', path: '/category/49' },
-    { id: '50', name: '制服', path: '/category/50' },
-    { id: '51', name: '麻豆', path: '/category/51' },
-    { id: '52', name: '果冻', path: '/category/52' },
-    { id: '53', name: 'SM', path: '/category/53' },
-    { id: '54', name: '重口', path: '/category/54' },
-    { id: '55', name: '处女', path: '/category/55' },
-    { id: '56', name: '熟女', path: '/category/56' },
-    { id: '57', name: '换妻', path: '/category/57' },
-    { id: '58', name: '明星', path: '/category/58' },
-    { id: '59', name: '人妻', path: '/category/59' },
-    { id: '60', name: '孕妇', path: '/category/60' },
-    { id: '61', name: '人妖', path: '/category/61' },
-    { id: '62', name: '人兽', path: '/category/62' },
-    { id: '63', name: '爆菊', path: '/category/63' },
-    { id: '64', name: '潮喷', path: '/category/64' },
-    { id: '65', name: '剧情', path: '/category/65' },
-    { id: '66', name: '无码', path: '/category/66' },
-    { id: '67', name: '日韩', path: '/category/67' },
-    { id: '68', name: '精品', path: '/category/68' },
+    { id: '32', name: '国产视频', path: '/category/32' },
+    { id: '33', name: '国产主播', path: '/category/33' },
+    { id: '34', name: '91大神', path: '/category/34' },
+    { id: '35', name: '热门事件', path: '/category/35' },
+    { id: '36', name: '传媒自拍', path: '/category/36' },
+    { id: '38', name: '日本有码', path: '/category/38' },
+    { id: '39', name: '日本无码', path: '/category/39' },
+    { id: '40', name: '日韩主播', path: '/category/40' },
+    { id: '41', name: '动漫肉番', path: '/category/41' },
+    { id: '42', name: '女同性恋', path: '/category/42' },
+    { id: '43', name: '中文字幕', path: '/category/43' },
+    { id: '44', name: '强奸乱伦', path: '/category/44' },
+    { id: '45', name: '熟女人妻', path: '/category/45' },
+    { id: '46', name: '制服诱惑', path: '/category/46' },
+    { id: '47', name: 'AV解说', path: '/category/47' },
+    { id: '48', name: '女星换脸', path: '/category/48' },
+    { id: '49', name: '百万三区', path: '/category/49' },
+    { id: '50', name: '欧美精品', path: '/category/50' }
   ];
+
   const handleCategoryClick = (path) => {
     navigate(path);
   };
@@ -56,8 +43,8 @@ const Header = ({ searchTerm, onSearchChange, isDarkMode, toggleTheme, isVisible
       <div className="max-w-full md:px-6 md:pt-3 mx-auto flex flex-col gap-4">
         <div className="w-full flex items-center gap-4 justify-between">
           <div 
-          className="flex items-center"
-          onClick={() => navigate('/')} 
+            className="flex items-center"
+            onClick={() => navigate('/')} 
           >
             <div className={`text-red-500 text-2xl mr-2 ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>
               <img 

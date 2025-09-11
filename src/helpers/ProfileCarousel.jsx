@@ -1,12 +1,31 @@
 import React, { useRef, useState, useEffect } from 'react';
 import ProfileCard from './ProfileCard';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import profiles from '../data/profiles';
+import { getActors } from '../data/videoData';
 
 const ProfileCarousel = () => {
   const scrollRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
+  const [actors, setActors] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // ดึงข้อมูลนักแสดงจาก API
+  useEffect(() => {
+    const fetchActors = async () => {
+      try {
+        setLoading(true);
+        const actorData = await getActors(20); // ดึงนักแสดง 20 คนแรก
+        setActors(actorData);
+      } catch (error) {
+        console.error('Error fetching actors:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchActors();
+  }, []);
 
   const checkScroll = () => {
     if (!scrollRef.current) return;
@@ -23,9 +42,26 @@ const ProfileCarousel = () => {
       ref.addEventListener('scroll', checkScroll);
       return () => ref.removeEventListener('scroll', checkScroll);
     }
-  }, []);
+  }, [actors]); // ตรวจสอบใหม่เมื่อข้อมูลนักแสดงเปลี่ยนแปลง
 
   const scrollByAmount = 300;
+
+  if (loading) {
+    return (
+      <div className="relative max-w-7xl mx-auto">
+        <div className="flex overflow-x-auto pt-2">
+          {[...Array(10)].map((_, i) => (
+            <div key={i} className="flex-shrink-0 w-15 md:w-16 lg:w-20 mx-2">
+              <div className="animate-pulse">
+                <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-gray-300 mx-auto"></div>
+                <div className="h-4 bg-gray-300 rounded mt-2 mx-2"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative max-w-7xl mx-auto">
@@ -45,9 +81,9 @@ const ProfileCarousel = () => {
           ref={scrollRef}
           className="flex overflow-x-auto scroll-smooth no-scrollbar pt-2"
         >
-          {profiles.map((profile) => (
-            <div key={profile.id} className="flex-shrink-0 w-15 md:w-16 lg:w-20">
-              <ProfileCard profile={profile} />
+          {actors.map((actor) => (
+            <div key={actor.id} className="flex-shrink-0 w-15 md:w-16 lg:w-20">
+              <ProfileCard profile={actor} />
             </div>
           ))}
         </div>
