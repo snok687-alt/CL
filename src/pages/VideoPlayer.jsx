@@ -121,25 +121,30 @@ const VideoPlayer = () => {
     }
   }, []);
 
-  // Load more related videos - แก้ไขฟังก์ชันนี้
+  // Load more related videos - ปรับปรุงเพื่อโหลดแบบต่อเนื่องจนหมด
   const loadMoreRelated = useCallback(async () => {
     if (relatedLoading || !hasMoreRelated || !video?.type_id) return;
 
     setRelatedLoading(true);
-    const nextPage = relatedPage + 1;
 
     try {
       const result = await getMoreVideosInCategory(
         video.type_id,
-        relatedVideos.map(v => v.id),
-        nextPage,
-        12
+        relatedVideos.map(v => v.id), // exclude IDs ที่มีอยู่แล้ว (ไม่รวม current video id เพราะกรองใน useEffect แล้ว)
+        relatedPage + 1,
+        18 // โหลด 18 วิดีโอต่อครั้ง
       );
 
       if (result.videos.length > 0) {
-        setRelatedVideos(prev => [...prev, ...result.videos]);
-        setRelatedPage(nextPage);
-        setHasMoreRelated(result.hasMore);
+        // กรองวิดีโอปัจจุบันออก (double check)
+        const filteredNewVideos = result.videos.filter(v => v.id !== video.id);
+        
+        if (filteredNewVideos.length > 0) {
+          setRelatedVideos(prev => [...prev, ...filteredNewVideos]);
+          setRelatedPage(prevPage => prevPage + 1);
+        }
+        
+        setHasMoreRelated(result.hasMore && filteredNewVideos.length > 0);
       } else {
         setHasMoreRelated(false);
       }
@@ -151,25 +156,36 @@ const VideoPlayer = () => {
     }
   }, [relatedLoading, hasMoreRelated, video, relatedVideos, relatedPage]);
 
-  // Scroll handler for related videos
-  const handleRelatedScroll = useCallback(() => {
-    const container = relatedContainerRef.current;
-    if (!container) return;
-
-    const { scrollTop, scrollHeight, clientHeight } = container;
-    if (scrollHeight - scrollTop <= clientHeight + 100) {
-      loadMoreRelated();
-    }
-  }, [loadMoreRelated]);
-
-  // Set up scroll listener
+  // Intersection Observer for infinite scroll
   useEffect(() => {
+    if (!hasMoreRelated || relatedLoading) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          loadMoreRelated();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
     const container = relatedContainerRef.current;
     if (!container) return;
 
-    container.addEventListener('scroll', handleRelatedScroll, { passive: true });
-    return () => container.removeEventListener('scroll', handleRelatedScroll);
-  }, [handleRelatedScroll]);
+    // สร้าง sentinel element สำหรับตรวจจับการเลื่อนถึงล่าง
+    const sentinel = document.createElement('div');
+    sentinel.id = 'scroll-sentinel';
+    sentinel.style.height = '1px';
+    container.appendChild(sentinel);
+    observer.observe(sentinel);
+
+    return () => {
+      observer.disconnect();
+      if (container && container.contains(sentinel)) {
+        container.removeChild(sentinel);
+      }
+    };
+  }, [loadMoreRelated, hasMoreRelated, relatedLoading, relatedVideos.length]);
 
   // Fetch video data
   useEffect(() => {
@@ -211,35 +227,46 @@ const VideoPlayer = () => {
     };
   }, [videoId, processVideoUrl, loadVideo]);
 
-  // Fetch related videos - แก้ไข useEffect นี้
+  // Fetch related videos - ปรับปรุงให้ใช้ type_id อย่างถูกต้อง
   useEffect(() => {
     const fetchRelated = async () => {
       if (!video?.id || !video?.type_id) {
         return;
       }
 
+      console.log(`Loading related videos for type_id: ${video.type_id}, current video: ${video.id}`);
+
       try {
-        // โหลด 12 วิดีโอแรกจากหมวดหมู่เดียวกัน
-        const initialRelated = await getMoreVideosInCategory(
+        // เริ่มต้นโหลดวิดีโอจากหมวดหมู่เดียวกัน
+        const initialResult = await getMoreVideosInCategory(
           video.type_id,
-          [video.id], // ไม่รวมวิดีโอปัจจุบัน
+          [video.id], // exclude current video
           1, // หน้าแรก
-          13 // โหลด 13 เพื่อให้ได้ 12 หลังกรอง
+          18 // โหลด 18 วิดีโอแรก
         );
 
-        // กรองวิดีโอปัจจุบันออก
-        const filteredRelated = initialRelated.videos
-          .filter(relatedVideo => relatedVideo.id !== video.id)
-          .slice(0, 12);
-
-        setRelatedVideos(filteredRelated);
-        setHasMoreRelated(initialRelated.hasMore);
-        setRelatedPage(1);
+        if (initialResult.videos.length > 0) {
+          // กรองวิดีโอปัจจุบันออกอีกครั้ง (เพื่อความแน่ใจ)
+          const filteredRelated = initialResult.videos.filter(relatedVideo => relatedVideo.id !== video.id);
+          
+          setRelatedVideos(filteredRelated);
+          setHasMoreRelated(initialResult.hasMore);
+          setRelatedPage(1);
+          
+          console.log(`Loaded ${filteredRelated.length} related videos, hasMore: ${initialResult.hasMore}`);
+        } else {
+          console.log('No related videos found for this category');
+          setRelatedVideos([]);
+          setHasMoreRelated(false);
+        }
       } catch (error) {
         console.error('Error loading related videos:', error);
+        setRelatedVideos([]);
+        setHasMoreRelated(false);
       }
     };
 
+    // โหลดหลังจากวิดีโอหลักโหลดเสร็จแล้ว
     if (video && !videoLoading) {
       fetchRelated();
     }
@@ -355,7 +382,7 @@ const VideoPlayer = () => {
                 <span className="mx-3">•</span>
                 <span className={`px-2 py-1 rounded-full text-xs ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'
                   }`}>
-                  {video.category}
+                  {video.category} (ID: {video.type_id})
                 </span>
               </div>
 
@@ -385,7 +412,7 @@ const VideoPlayer = () => {
             <div className={`rounded-lg ${isDarkMode ? 'bg-gray-800 lg:bg-transparent' : 'bg-white lg:bg-transparent'}`}>
               <h3 className={`text-xl font-bold mb-1 py-3 pl-2 sticky top-0 ${isDarkMode ? 'bg-gradient-to-r from-gray-900 to-transparent' : 'bg-gradient-to-r from-gray-100 to-transparent'
                 }`}>
-                วิดีโอที่เกี่ยวข้อง ({relatedVideos.length}+)
+                วีดีโอที่เกี่ยวข้อง ({relatedVideos.length}{hasMoreRelated ? '+' : ''})
               </h3>
 
               <div
@@ -402,39 +429,55 @@ const VideoPlayer = () => {
                   </div>
                 ))}
 
-                {/* Loading indicator */}
+                {/* Loading indicator - ปรับให้แสดงผลดีขึ้น */}
                 {relatedLoading && (
                   <>
-                    {Array.from({ length: 12 }).map((_, idx) => (
+                    {Array.from({ length: 6 }).map((_, idx) => (
                       <div key={`loading-${idx}`} className="animate-pulse space-y-2">
                         <div className="aspect-video bg-gray-700 rounded" />
                         <div className="h-3 w-5/6 bg-gray-600 rounded" />
+                        <div className="h-2 w-3/4 bg-gray-600 rounded" />
                       </div>
                     ))}
                   </>
                 )}
 
+                {/* Load more button - เพิ่มปุ่มสำหรับโหลดเพิ่มเมื่อมีปัญหา scroll */}
+                {hasMoreRelated && !relatedLoading && relatedVideos.length > 0 && (
+                  <div className="col-span-3 flex justify-center py-4">
+                    <button
+                      onClick={loadMoreRelated}
+                      className={`px-4 py-2 rounded-lg transition-colors ${
+                        isDarkMode 
+                          ? 'bg-gray-700 hover:bg-gray-600 text-white' 
+                          : 'bg-gray-200 hover:bg-gray-300 text-black'
+                      }`}
+                    >
+                      โหลดเพิ่มเติม ({relatedVideos.length} วิดีโอ)
+                    </button>
+                  </div>
+                )}
+
                 {/* End of related videos message */}
                 {!hasMoreRelated && relatedVideos.length > 0 && (
-                  <div className="col-span-2 md:col-span-3 text-center py-4">
+                  <div className="col-span-3 text-center py-4">
                     <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                      โหลดวิดีโอครบทั้งหมดแล้ว
+                      โหลดวีดีโอครบทั้งหมดแล้ว
                     </p>
                   </div>
                 )}
 
                 {/* No related videos message */}
                 {relatedVideos.length === 0 && !relatedLoading && (
-                  <div className="col-span-2 md:col-span-3 text-center py-8">
+                  <div className="col-span-3 text-center py-8">
                     <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                      ไม่มีวิดีโอที่เกี่ยวข้องในขณะนี้
+                      ไม่มีวีดีโอที่เกี่ยวข้องในขณะนี้
                     </p>
                   </div>
                 )}
               </div>
             </div>
           </div>
-
         </div>
       </div>
     </div>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Dashboard from '../components/Dashboard';
 import VideoPlayer from '../pages/VideoPlayer';
 import VideoGrid from '../pages/VideoGrid';
@@ -40,7 +40,7 @@ const Router = () => {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Dashboard />}>
-          <Route index element={<SearchResults />} />
+          <Route index element={<Navigate to="/category/32" replace />} />
           <Route path="category/:categoryId" element={<VideoGrid />} />
           <Route path="watch/:videoId" element={<VideoPlayer />} />
           <Route path="search" element={<SearchResults />} />

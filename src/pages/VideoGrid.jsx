@@ -21,13 +21,16 @@ const VideoGrid = ({ title, filter }) => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
-  
+
   const { searchTerm, isDarkMode } = useOutletContext();
   const location = useLocation();
   const loadingRef = useRef(false);
-  
+
   const isCategoryPage = location.pathname.startsWith('/category/');
   const categoryId = isCategoryPage ? location.pathname.split('/').pop() : null;
+
+  // กำหนดจำนวนวิดีโอต่อหน้าเป็น 18
+  const VIDEOS_PER_PAGE = 18;
 
   // Load initial videos
   const loadInitialVideos = useCallback(async () => {
@@ -40,10 +43,10 @@ const VideoGrid = ({ title, filter }) => {
 
     try {
       let videosData = [];
-      const limit = 12;
 
       if (searchTerm?.trim()) {
-        const allVideos = await getVideosByCategory(categoryId, 50);
+        // สำหรับการค้นหา โหลดทั้งหมดแล้วกรอง
+        const allVideos = await getVideosByCategory(categoryId, 100);
         videosData = allVideos.filter(video =>
           video.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
           video.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -51,8 +54,9 @@ const VideoGrid = ({ title, filter }) => {
         );
         setHasMore(false);
       } else {
-        videosData = await getVideosByCategory(categoryId, limit);
-        setHasMore(videosData.length >= limit);
+        // โหลด 18 วิดีโอแรก
+        videosData = await getVideosByCategory(categoryId, VIDEOS_PER_PAGE);
+        setHasMore(videosData.length >= VIDEOS_PER_PAGE);
       }
 
       setVideos(videosData);
@@ -63,12 +67,12 @@ const VideoGrid = ({ title, filter }) => {
       setLoading(false);
       loadingRef.current = false;
     }
-  }, [searchTerm, isCategoryPage, categoryId]);
+  }, [searchTerm, isCategoryPage, categoryId, VIDEOS_PER_PAGE]);
 
   // Load more videos
   const loadMoreVideos = useCallback(async () => {
     if (loadingMore || !hasMore || loadingRef.current || searchTerm?.trim()) return;
-    
+
     setLoadingMore(true);
     const nextPage = page + 1;
 
@@ -77,7 +81,7 @@ const VideoGrid = ({ title, filter }) => {
         categoryId,
         videos.map(v => v.id),
         nextPage,
-        18
+        VIDEOS_PER_PAGE // ใช้ VIDEOS_PER_PAGE แทนค่าคงที่
       );
 
       if (result.videos.length > 0) {
@@ -93,7 +97,7 @@ const VideoGrid = ({ title, filter }) => {
     } finally {
       setLoadingMore(false);
     }
-  }, [loadingMore, hasMore, categoryId, videos, page, searchTerm]);
+  }, [loadingMore, hasMore, categoryId, videos, page, searchTerm, VIDEOS_PER_PAGE]);
 
   // Intersection Observer for infinite scroll
   useEffect(() => {
@@ -105,7 +109,7 @@ const VideoGrid = ({ title, filter }) => {
           loadMoreVideos();
         }
       },
-      { threshold: 0.5 }
+      { threshold: 0.1 } // ลด threshold เพื่อให้โหลดเร็วขึ้น
     );
 
     const sentinel = document.getElementById('scroll-sentinel');
@@ -136,7 +140,8 @@ const VideoGrid = ({ title, filter }) => {
       <div className={`min-h-screen p-2 md:p-4 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-100'}`}>
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-3 xs:grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-6 gap-2 md:gap-4">
-            {Array.from({ length: 18 }).map((_, index) => (
+            {/* แสดง 18 skeleton cards */}
+            {Array.from({ length: VIDEOS_PER_PAGE }).map((_, index) => (
               <VideoCardSkeleton key={index} isDarkMode={isDarkMode} />
             ))}
           </div>
@@ -148,9 +153,6 @@ const VideoGrid = ({ title, filter }) => {
   return (
     <div className={`min-h-screen p-2 md:p-6 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-100'}`}>
       <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between">
-        </div>
-
         {videos.length === 0 ? (
           <div className={`text-center py-12 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
             <svg className="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -167,7 +169,7 @@ const VideoGrid = ({ title, filter }) => {
                 พบ {videos.length} วิดีโอ
               </p>
             )}
-            
+
             <div className="grid grid-cols-3 xs:grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 md:gap-4">
               {videos.map((video) => (
                 <VideoCard
@@ -181,7 +183,8 @@ const VideoGrid = ({ title, filter }) => {
             {/* Loading More Skeleton */}
             {loadingMore && (
               <div className="grid grid-cols-3 xs:grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 md:gap-4 mt-4">
-                {Array.from({ length: 18 }).map((_, index) => (
+                {/* แสดง 18 skeleton cards สำหรับการโหลดเพิ่ม */}
+                {Array.from({ length: VIDEOS_PER_PAGE }).map((_, index) => (
                   <VideoCardSkeleton key={`skeleton-${index}`} isDarkMode={isDarkMode} />
                 ))}
               </div>

@@ -71,26 +71,29 @@ const getVideosWithDetails = async (ids) => {
 };
 
 // Main functions
-export const fetchVideosFromAPI = async (type_id = '', searchQuery = '', limit = 20, page = 1) => {
+// ใน videoData.js ตรวจสอบฟังก์ชัน fetchVideosFromAPI
+export const fetchVideosFromAPI = async (type_id = '', searchQuery = '', limit = 18, page = 1) => {
   const cacheKey = `videos:${type_id}:${searchQuery}:${limit}:${page}`;
   const cached = getFromCache(cacheKey);
   if (cached) return cached;
 
   try {
     const params = new URLSearchParams();
-    if (type_id && type_id !== 'all') params.set('t', type_id); // ใช้ type_id ที่ตรงกับ API
+    if (type_id && type_id !== 'all') params.set('t', type_id);
     if (searchQuery) params.set('wd', searchQuery);
     params.set('pg', page);
-    params.set('limit', limit);
+    // ไม่ส่งพารามิเตอร์ limit ไปยัง API
 
     const response = await apiCall(params.toString());
-    // ปรับตามโครงสร้าง response ใหม่
     const videoList = response.data?.list || response.data?.data || [];
     
     if (!videoList.length) return [];
 
     const ids = videoList.map(item => item.vod_id || item.id).filter(Boolean);
-    const videos = await getVideosWithDetails(ids);
+    const allVideos = await getVideosWithDetails(ids);
+    
+    // จำกัดจำนวนวิดีโอที่ส่งกลับ
+    const videos = allVideos.slice(0, limit);
     
     setToCache(cacheKey, videos);
     return videos;
@@ -123,25 +126,26 @@ export const getVideoById = async (id) => {
   }
 };
 
-export const searchVideos = async (query, limit = 20) => {
+// ใน videoData.js แก้ไขฟังก์ชัน searchVideos
+export const searchVideos = async (query, limit = 18) => {  // เปลี่ยนจาก 20 เป็น 18
   if (!query.trim()) return [];
   return fetchVideosFromAPI('', query, limit);
 };
 
-export const getVideosByCategory = async (type_id, limit = 20) => {
+export const getVideosByCategory = async (type_id, limit = 18) => {  // เปลี่ยนจาก 20 เป็น 18
   if (!type_id || type_id === 'all') {
     return fetchVideosFromAPI('', '', limit);
   }
   return fetchVideosFromAPI(type_id, '', limit);
 };
 
-// videoData.js - แก้ไขฟังก์ชัน getRelatedVideos
-export const getRelatedVideos = async (currentVideoId, currentVideoTypeId, currentVideoTitle, limit = 12) => {
+// ใน VideoPlayer.jsx แก้ไขฟังก์ชัน getRelatedVideos
+export const getRelatedVideos = async (currentVideoId, currentVideoTypeId, currentVideoTitle, limit = 18) => {  // เปลี่ยนจาก 12 เป็น 18
   if (!currentVideoTypeId) return [];
 
   try {
     // ใช้ type_id ในการค้นหาวิดีโอในหมวดหมู่เดียวกัน
-    const categoryVideos = await fetchVideosFromAPI(currentVideoTypeId, '', limit * 2);
+    const categoryVideos = await fetchVideosFromAPI(currentVideoTypeId, '', limit);
     
     // กรองวิดีโอปัจจุบันออกและจำกัดจำนวน
     const related = categoryVideos
@@ -155,17 +159,16 @@ export const getRelatedVideos = async (currentVideoId, currentVideoTypeId, curre
   }
 };
 
-export const getMoreVideosInCategory = async (type_id, excludeIds = [], page = 1, limit = 12) => {
+export const getMoreVideosInCategory = async (type_id, excludeIds = [], page = 1, limit = 18) => {
   try {
-    const videos = await fetchVideosFromAPI(type_id, '', limit * 2, page);
+    const videos = await fetchVideosFromAPI(type_id, '', limit, page);
     
-    const filtered = videos
-      .filter(video => !excludeIds.includes(video.id))
-      .slice(0, limit);
-
+    // กรองวิดีโอที่ไม่ได้อยู่ใน excludeIds
+    const filtered = videos.filter(video => !excludeIds.includes(video.id));
+    
     return {
       videos: filtered,
-      hasMore: filtered.length >= limit
+      hasMore: filtered.length >= limit // ตรวจสอบว่ายังมีวิดีโอเหลืออีกหรือไม่
     };
   } catch (error) {
     console.error('Error getting more videos:', error);
@@ -252,9 +255,11 @@ export const getAllVideosByCategory = async (type_id, limit = 0) => {
   return allVideos;
 };
 
-export const getAllVideos = async (limit = 20) => {
+// ใน videoData.js แก้ไขฟังก์ชัน getAllVideos
+export const getAllVideos = async (limit = 18) => {  // เปลี่ยนจาก 20 เป็น 18
   return fetchVideosFromAPI('', '', limit);
 };
+
 
 export const checkAPIStatus = async () => {
   try {
