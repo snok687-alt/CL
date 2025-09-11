@@ -1,9 +1,7 @@
-// components/ProfileCarousel.jsx
-
 import React, { useRef, useState, useEffect } from 'react';
 import ProfileCard from './ProfileCard';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import profiles from '../data/profiles';  // นำเข้าข้อมูลจากไฟล์เดียวกัน
+import profiles from '../data/profiles';
 
 const ProfileCarousel = () => {
   const scrollRef = useRef(null);
@@ -11,6 +9,8 @@ const ProfileCarousel = () => {
   const [canScrollRight, setCanScrollRight] = useState(true);
 
   const checkScroll = () => {
+    if (!scrollRef.current) return;
+    
     const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
     setCanScrollLeft(scrollLeft > 0);
     setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 5);
@@ -19,32 +19,34 @@ const ProfileCarousel = () => {
   useEffect(() => {
     checkScroll();
     const ref = scrollRef.current;
-    ref.addEventListener('scroll', checkScroll);
-    return () => ref.removeEventListener('scroll', checkScroll);
+    if (ref) {
+      ref.addEventListener('scroll', checkScroll);
+      return () => ref.removeEventListener('scroll', checkScroll);
+    }
   }, []);
 
   const scrollByAmount = 300;
 
   return (
-    <div className="relative max-w-2xl mt-2 mx-auto">
+    <div className="relative max-w-7xl mx-auto">
       <div className="relative">
         {/* ปุ่มซ้าย */}
         {canScrollLeft && (
           <button
             onClick={() => (scrollRef.current.scrollLeft -= scrollByAmount)}
-            className="absolute left-0 top-1/3 -translate-y-1/3 z-10 bg-white border border-gray-200 shadow-lg hover:bg-gray-100 transition rounded-full p-2"
+            className="absolute left-0 top-1/3 -translate-y-1/3 z-10 bg-white border border-gray-200 shadow-lg hover:bg-gray-100 transition rounded-full"
           >
-            <ChevronLeft className="w-5 h-5 text-gray-700" />
+            <ChevronLeft className="w-6 h-6 text-gray-700" />
           </button>
         )}
 
         {/* ตัวแถวแนวนอน */}
         <div
           ref={scrollRef}
-          className="flex overflow-x-auto scroll-smooth space-x-2 no-scrollbar px-2"
+          className="flex overflow-x-auto scroll-smooth no-scrollbar pt-2"
         >
           {profiles.map((profile) => (
-            <div key={profile.id} className="flex-shrink-0 w-16">
+            <div key={profile.id} className="flex-shrink-0 w-15 md:w-16 lg:w-20">
               <ProfileCard profile={profile} />
             </div>
           ))}
@@ -54,9 +56,9 @@ const ProfileCarousel = () => {
         {canScrollRight && (
           <button
             onClick={() => (scrollRef.current.scrollLeft += scrollByAmount)}
-            className="absolute right-0 top-1/3 -translate-y-1/3 z-10 bg-white border border-gray-200 shadow-lg hover:bg-gray-100 transition rounded-full p-2"
+            className="absolute right-0 top-1/3 -translate-y-1/3 z-10 bg-white border border-gray-200 shadow-lg hover:bg-gray-100 transition rounded-full"
           >
-            <ChevronRight className="w-5 h-5 text-gray-700" />
+            <ChevronRight className="w-6 h-6 text-gray-700" />
           </button>
         )}
       </div>

@@ -19,14 +19,3 @@ export const getCategoryName = (categoryId) => {
   return categoryMap[categoryId] || `หมวดหมู่ ${categoryId}`;
 };
 
-export const getFilterName = (filter) => {
-  const filterMap = {
-    'trending': 'กำลังฮิต',
-    'education': 'การศึกษา',
-    'travel': 'ท่องเที่ยว',
-    'cooking': 'ทำอาหาร',
-    'music': 'ดนตรี',
-    'news': 'ข่าว'
-  };
-  return filterMap[filter] || filter;
-};

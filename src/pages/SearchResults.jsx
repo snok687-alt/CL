@@ -13,7 +13,6 @@ const SearchResults = () => {
                       new URLSearchParams(location.search).get('q') || 
                       searchTerm || 
                       '';
-
   useEffect(() => {
     if (searchQuery) {
       setSearchTerm(searchQuery);
