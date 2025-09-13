@@ -14,14 +14,15 @@ const Dashboard = () => {
 
   const isVideoPage = location.pathname.startsWith('/watch');
   const isSearchPage = location.pathname === '/search';
+  const isProfilePage = location.pathname.startsWith('/profile'); // เพิ่มการตรวจสอบหน้า profile
 
   const handleSearchChange = (term) => {
     setSearchTerm(term);
-    
+
     if (searchTimeout.current) {
       clearTimeout(searchTimeout.current);
     }
-    
+
     searchTimeout.current = setTimeout(() => {
       if (term.trim() !== '') {
         if (isSearchPage) {
@@ -55,9 +56,7 @@ const Dashboard = () => {
       lastScrollY.current = currentScrollY;
     };
 
-    // if (!isVideoPage) {
-    //   window.addEventListener('scroll', handleScroll, { passive: true });
-    // }
+    // Apply scroll listener for all pages
     window.addEventListener('scroll', handleScroll, { passive: true });
 
     return () => {
@@ -69,14 +68,13 @@ const Dashboard = () => {
   }, [isVideoPage]);
 
   useEffect(() => {
-  const handleHeaderToggle = (e) => {
-    setIsHeaderVisible(e.detail === 'show');
-  };
+    const handleHeaderToggle = (e) => {
+      setIsHeaderVisible(e.detail === 'show');
+    };
 
-  window.addEventListener('toggleHeader', handleHeaderToggle);
-  return () => window.removeEventListener('toggleHeader', handleHeaderToggle);
-}, []);
-
+    window.addEventListener('toggleHeader', handleHeaderToggle);
+    return () => window.removeEventListener('toggleHeader', handleHeaderToggle);
+  }, []);
 
   const toggleTheme = () => {
     setIsDarkMode((prevMode) => !prevMode);
@@ -88,7 +86,8 @@ const Dashboard = () => {
         isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-black'
       }`}
     >
-      {(!isVideoPage || (isVideoPage && isLargeScreen)) && (
+      {/* แสดง Header เฉพาะเมื่อไม่ใช่หน้า profile หรือ video page (ยกเว้น large screen) */}
+      {!isProfilePage && (!isVideoPage || (isVideoPage && isLargeScreen)) && (
         <Header
           searchTerm={searchTerm}
           onSearchChange={handleSearchChange}
@@ -99,6 +98,7 @@ const Dashboard = () => {
       )}
 
       <main className={`flex-grow ${isVideoPage ? 'pt-0' : ''}`}>
+        {/* Pass isDarkMode to all child components via context */}
         <Outlet context={{ searchTerm, isDarkMode, setSearchTerm }} />
       </main>
     </div>

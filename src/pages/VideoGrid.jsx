@@ -5,15 +5,33 @@ import { getCategoryName } from '../routes/Router';
 import { getVideosByCategory, searchVideos, getMoreVideosInCategory } from '../data/videoData';
 
 const VideoCardSkeleton = ({ isDarkMode }) => (
-  <div className={`rounded-lg overflow-hidden shadow-md ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
-    <div className="relative aspect-[16/9] bg-gray-600 animate-pulse"></div>
-    <div className="p-3">
-      <div className={`h-4 bg-gray-600 rounded mb-2 animate-pulse ${isDarkMode ? 'bg-gray-700' : 'bg-gray-300'}`}></div>
-      <div className={`h-3 bg-gray-600 rounded mb-1 animate-pulse ${isDarkMode ? 'bg-gray-700' : 'bg-gray-300'}`}></div>
-      <div className={`h-3 bg-gray-600 rounded w-2/3 animate-pulse ${isDarkMode ? 'bg-gray-700' : 'bg-gray-300'}`}></div>
+  <div
+    className={`rounded-md overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer transform hover:-translate-y-1 ${isDarkMode ? 'bg-gray-800' : 'bg-white'
+      }`}
+  >
+    {/* รูปภาพ Skeleton */}
+    <div className="relative aspect-[6/5] bg-gray-600 animate-pulse"></div>
+
+    {/* เนื้อหา Skeleton */}
+    <div className="px-2 py-1 space-y-1">
+      <div
+        className={`h-4 rounded ${isDarkMode ? 'bg-gray-700' : 'bg-gray-300'} w-5/6 animate-pulse`}
+      ></div>
+      <div className="flex items-center justify-around text-xs space-x-2">
+        <div
+          className={`h-3 w-10 rounded ${isDarkMode ? 'bg-gray-700' : 'bg-gray-300'} animate-pulse`}
+        ></div>
+        <div
+          className={`h-3 w-1 rounded ${isDarkMode ? 'bg-gray-700' : 'bg-gray-300'} animate-pulse`}
+        ></div>
+        <div
+          className={`h-3 w-14 rounded ${isDarkMode ? 'bg-gray-700' : 'bg-gray-300'} animate-pulse`}
+        ></div>
+      </div>
     </div>
   </div>
 );
+
 
 const VideoGrid = ({ title, filter }) => {
   const [videos, setVideos] = useState([]);
@@ -33,41 +51,24 @@ const VideoGrid = ({ title, filter }) => {
   const VIDEOS_PER_PAGE = 18;
 
   // Load initial videos
-  const loadInitialVideos = useCallback(async () => {
-    if (loadingRef.current) return;
-    loadingRef.current = true;
-    setLoading(true);
+// ลดความซับซ้อนของ loadInitialVideos
+const loadInitialVideos = useCallback(async () => {
+  if (loadingRef.current) return;
+  loadingRef.current = true;
+  setLoading(true);
+
+  try {
+    const videosData = await getVideosByCategory(categoryId, VIDEOS_PER_PAGE);
+    setVideos(videosData);
+    setHasMore(videosData.length >= VIDEOS_PER_PAGE);
+  } catch (error) {
+    console.error('Error loading videos:', error);
     setVideos([]);
-    setPage(1);
-    setHasMore(true);
-
-    try {
-      let videosData = [];
-
-      if (searchTerm?.trim()) {
-        // สำหรับการค้นหา โหลดทั้งหมดแล้วกรอง
-        const allVideos = await getVideosByCategory(categoryId, 100);
-        videosData = allVideos.filter(video =>
-          video.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          video.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          video.channelName.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-        setHasMore(false);
-      } else {
-        // โหลด 18 วิดีโอแรก
-        videosData = await getVideosByCategory(categoryId, VIDEOS_PER_PAGE);
-        setHasMore(videosData.length >= VIDEOS_PER_PAGE);
-      }
-
-      setVideos(videosData);
-    } catch (error) {
-      console.error('Error loading videos:', error);
-      setVideos([]);
-    } finally {
-      setLoading(false);
-      loadingRef.current = false;
-    }
-  }, [searchTerm, isCategoryPage, categoryId, VIDEOS_PER_PAGE]);
+  } finally {
+    setLoading(false);
+    loadingRef.current = false;
+  }
+}, [categoryId, VIDEOS_PER_PAGE]);
 
   // Load more videos
   const loadMoreVideos = useCallback(async () => {
@@ -137,7 +138,7 @@ const VideoGrid = ({ title, filter }) => {
   // Loading state
   if (loading) {
     return (
-      <div className={`min-h-screen p-2 md:p-4 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-100'}`}>
+      <div className={`min-h-screen p-1 md:p-4 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-100'}`}>
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-3 xs:grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-6 gap-2 md:gap-4">
             {/* แสดง 18 skeleton cards */}
@@ -151,7 +152,7 @@ const VideoGrid = ({ title, filter }) => {
   }
 
   return (
-    <div className={`min-h-screen p-2 md:p-6 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-100'}`}>
+    <div className={`min-h-screen p-1 md:p-4 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-100'}`}>
       <div className="max-w-7xl mx-auto">
         {videos.length === 0 ? (
           <div className={`text-center py-12 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -170,7 +171,7 @@ const VideoGrid = ({ title, filter }) => {
               </p>
             )}
 
-            <div className="grid grid-cols-3 xs:grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 md:gap-4">
+            <div className="grid grid-cols-3 xs:grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-1 md:gap-4">
               {videos.map((video) => (
                 <VideoCard
                   key={video.id}

@@ -12,24 +12,25 @@ const VideoCard = ({ video, onClick, isDarkMode }) => {
     }
   };
 
-  const formatViews = (views) => {
-    if (views >= 1000000) return `${(views / 1000000).toFixed(1)}M ดู`;
-    if (views >= 1000) return `${(views / 1000).toFixed(0)}K ดู`;
-    return `${views} ดู`;
-  };
+// ຄຳນວນຍອດເບິ່ງ - ใช้ข้อมูลจาก props โดยตรง
+const formatViews = (views) => {
+  if (views >= 1000000) return `${(views / 1000000).toFixed(1)}M ดู`;
+  if (views >= 1000) return `${(views / 1000).toFixed(0)}K ดู`;
+  return `${views} ดู`;
+};
 
   // ฟังก์ชันตรวจสอบว่าภาพโหลดสำเร็จหรือไม่
   const handleImageError = (e) => {
-    e.target.src = 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=640&h=360&fit=crop';
+    e.target.src = '';
   };
 
   return (
     <div
-      className={`rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer transform hover:-translate-y-1 ${isDarkMode ? 'bg-gray-800' : 'bg-white'
+      className={`rounded-md overflow-hidden shadow-md hover:shadow-lg py-1 transition-all duration-300 cursor-pointer transform hover:-translate-y-1 ${isDarkMode ? 'bg-gray-800' : 'bg-white'
         }`}
       onClick={handleVideoClick}
     >
-      <div className="relative aspect-[16/9] bg-gray-700 overflow-hidden">
+      <div className="relative aspect-[6/5] bg-gray-700 overflow-hidden">
         <img
           src={video.thumbnail}
           alt={video.title}
@@ -47,17 +48,17 @@ const VideoCard = ({ video, onClick, isDarkMode }) => {
           </div>
         </div>
       </div>
-      <div className="py-1 px-2">
-        <p className={`font-medium mb-1 text-xs leading-tight truncate whitespace-nowrap overflow-hidden ${isDarkMode ? 'text-white' : 'text-black'
+      <div className=" px-2 pt-1">
+        <p className={`font-medium text-xs leading-tight truncate whitespace-nowrap overflow-hidden ${isDarkMode ? 'text-white' : 'text-black'
           }`} title={video.title}>
           {video.title}
         </p>
 
-        <div className={`flex items-center text-xs mt-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'
+        <div className={`flex items-center justify-around text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'
           }`}>
-          <span>{formatViews(video.views)}</span>
+          <span className='text-sx'>{formatViews(video.views)}</span>
           <span className="mx-1.5">•</span>
-          <span>{video.uploadDate}</span>
+          <span className='text-sx'>{video.uploadDate}</span>
         </div>
       </div>
     </div>

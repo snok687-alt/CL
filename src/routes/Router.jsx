@@ -1,11 +1,11 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useOutletContext } from 'react-router-dom';
 import Dashboard from '../components/Dashboard';
 import VideoPlayer from '../pages/VideoPlayer';
 import VideoGrid from '../pages/VideoGrid';
 import SearchResults from '../pages/SearchResults';
 import ProfilePage from '../helpers/ProfilePage';
-import ActorVideos from '../helpers/ActorVideos';
 
 // ข้อมูลหมวดหมู่
 const categories = [
@@ -35,6 +35,12 @@ export const getCategoryName = (categoryId) => {
   return category ? category.name : `หมวดหมู่ ${categoryId}`;
 };
 
+// Wrapper component to pass theme context to ProfilePage
+const ProfilePageWrapper = () => {
+  const { isDarkMode } = useOutletContext();
+  return <ProfilePage isDarkMode={isDarkMode} />;
+};
+
 const Router = () => {
   return (
     <BrowserRouter>
@@ -44,8 +50,9 @@ const Router = () => {
           <Route path="category/:categoryId" element={<VideoGrid />} />
           <Route path="watch/:videoId" element={<VideoPlayer />} />
           <Route path="search" element={<SearchResults />} />
-          <Route path="profile" element={<ProfilePage />} />
-          <Route path="actor/:actorName" element={<ActorVideos />} />
+          {/* อัปเดต Route ใหม่สำหรับ Profile พร้อม theme support */}
+          <Route path="profile" element={<ProfilePageWrapper />} />
+          <Route path="profile/:profileName" element={<ProfilePageWrapper />} />
         </Route>
       </Routes>
     </BrowserRouter>

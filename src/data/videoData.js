@@ -44,10 +44,11 @@ const formatVideo = (item) => ({
   id: item.vod_id || item.id,
   title: item.vod_name || item.title || 'ไม่มีชื่อ',
   channelName: item.vod_director || item.director || item.type_name || 'ไม่ระบุ',
+  actors: item.vod_actor ? item.vod_actor.split(',').map(actor => actor.trim()) : [],
   views: parseInt(item.vod_hits || item.hits || 0),
   duration: parseInt(item.vod_duration || item.duration || 0),
   uploadDate: item.vod_year || item.year || item.vod_time || 'ไม่ระบุ',
-  thumbnail: item.vod_pic || item.pic || 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=640&h=360&fit=crop',
+  thumbnail: item.vod_pic || item.pic || '',
   videoUrl: item.vod_play_url || item.url || '',
   description: item.vod_content || item.content || 'ไม่มีคำอธิบาย',
   category: item.type_name || item.type || item.vod_class || 'ทั่วไป',
@@ -58,9 +59,9 @@ const formatVideo = (item) => ({
 // Get videos with details
 const getVideosWithDetails = async (ids) => {
   if (!ids.length) return [];
-  
+
   try {
-    const response = await retry(() => 
+    const response = await retry(() =>
       axios.get(`/api/?ac=detail&ids=${ids.join(',')}`)
     );
     return (response.data?.list || response.data?.data || []).map(formatVideo);
@@ -86,15 +87,15 @@ export const fetchVideosFromAPI = async (type_id = '', searchQuery = '', limit =
 
     const response = await apiCall(params.toString());
     const videoList = response.data?.list || response.data?.data || [];
-    
+
     if (!videoList.length) return [];
 
     const ids = videoList.map(item => item.vod_id || item.id).filter(Boolean);
     const allVideos = await getVideosWithDetails(ids);
-    
+
     // จำกัดจำนวนวิดีโอที่ส่งกลับ
     const videos = allVideos.slice(0, limit);
-    
+
     setToCache(cacheKey, videos);
     return videos;
   } catch (error) {
@@ -109,10 +110,10 @@ export const getVideoById = async (id) => {
   if (cached) return cached;
 
   try {
-    const response = await retry(() => 
+    const response = await retry(() =>
       axios.get(`/api/?ac=detail&ids=${id}`)
     );
-    
+
     // ปรับตามโครงสร้าง response ใหม่
     const videoData = response.data?.list?.[0] || response.data?.data?.[0];
     if (!videoData) return null;
@@ -146,7 +147,7 @@ export const getRelatedVideos = async (currentVideoId, currentVideoTypeId, curre
   try {
     // ใช้ type_id ในการค้นหาวิดีโอในหมวดหมู่เดียวกัน
     const categoryVideos = await fetchVideosFromAPI(currentVideoTypeId, '', limit);
-    
+
     // กรองวิดีโอปัจจุบันออกและจำกัดจำนวน
     const related = categoryVideos
       .filter(video => video.id !== currentVideoId)
@@ -162,13 +163,13 @@ export const getRelatedVideos = async (currentVideoId, currentVideoTypeId, curre
 export const getMoreVideosInCategory = async (type_id, excludeIds = [], page = 1, limit = 18) => {
   try {
     const videos = await fetchVideosFromAPI(type_id, '', limit, page);
-    
+
     // กรองวิดีโอที่ไม่ได้อยู่ใน excludeIds
     const filtered = videos.filter(video => !excludeIds.includes(video.id));
-    
+
     return {
       videos: filtered,
-      hasMore: filtered.length >= limit // ตรวจสอบว่ายังมีวิดีโอเหลืออีกหรือไม่
+      hasMore: videos.length === limit // ตรวจสอบว่ายังมีวิดีโอเหลืออีกหรือไม่
     };
   } catch (error) {
     console.error('Error getting more videos:', error);
@@ -184,19 +185,19 @@ export const getCategories = async () => {
   try {
     const response = await apiCall('limit=100');
     const videos = response.data?.list || response.data?.data || [];
-    
+
     // สร้าง array ของหมวดหมู่จาก type_id และ type_name
     const categoryMap = new Map();
-    
+
     videos.forEach(item => {
       const typeId = item.type_id || item.tid;
       const typeName = item.type_name || item.type;
-      
+
       if (typeId && typeName) {
         categoryMap.set(typeId, typeName);
       }
     });
-    
+
     // แปลง Map เป็น array ของ object
     const categories = Array.from(categoryMap, ([id, name]) => ({
       id,
@@ -230,25 +231,25 @@ export const getCategories = async () => {
 
 export const getAllVideosByCategory = async (type_id, limit = 0) => {
   if (limit > 0) return getVideosByCategory(type_id, limit);
-  
+
   const allVideos = [];
   let page = 1;
   let hasMore = true;
 
   while (hasMore && allVideos.length < 500) {
     const result = await getMoreVideosInCategory(
-      type_id, 
-      allVideos.map(v => v.id), 
-      page, 
+      type_id,
+      allVideos.map(v => v.id),
+      page,
       50
     );
-    
+
     if (result.videos.length === 0) break;
-    
+
     allVideos.push(...result.videos);
     hasMore = result.hasMore;
     page++;
-    
+
     await new Promise(resolve => setTimeout(resolve, 300));
   }
 
@@ -284,10 +285,10 @@ export const getActors = async (limit = 50) => {
   try {
     // ดึงวิดีโอจำนวนมากเพื่อแยกนักแสดง
     const videos = await fetchVideosFromAPI('', '', 200);
-    
+
     // สร้าง Map เพื่อเก็บนักแสดงที่ไม่ซ้ำกัน
     const actorMap = new Map();
-    
+
     videos.forEach(video => {
       // ใช้ channelName เป็นชื่อนักแสดง (อาจต้องปรับตามโครงสร้างข้อมูลจริง)
       const actorName = video.channelName;
@@ -305,12 +306,12 @@ export const getActors = async (limit = 50) => {
         }
       }
     });
-    
+
     // แปลง Map เป็น array และเรียงลำดับ
     const actors = Array.from(actorMap.values())
       .sort((a, b) => b.videoCount - a.videoCount)
       .slice(0, limit);
-    
+
     setToCache(cacheKey, actors);
     return actors;
   } catch (error) {
@@ -328,12 +329,12 @@ export const getVideosByActor = async (actorName, limit = 50) => {
   try {
     // ดึงวิดีโอทั้งหมดแล้วกรองตามนักแสดง
     const allVideos = await fetchVideosFromAPI('', '', 200);
-    
+
     // กรองวิดีโอตามนักแสดง
     const actorVideos = allVideos
       .filter(video => video.channelName === actorName)
       .slice(0, limit);
-    
+
     setToCache(cacheKey, actorVideos);
     return actorVideos;
   } catch (error) {
@@ -341,3 +342,84 @@ export const getVideosByActor = async (actorName, limit = 50) => {
     return [];
   }
 };
+// เพิ่มฟังก์ชันเหล่านี้ที่ส่วนท้ายของ videoData.js
+
+export const getProfileDetails = async (actorName) => {
+  try {
+    // ดึงวิดีโอทั้งหมดของนักแสดงคนนี้
+    const videos = await getVideosByActor(actorName, 50);
+    
+    if (videos.length === 0) {
+      return {
+        name: actorName,
+        image: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&h=400&fit=crop',
+        age: 'ไม่ระบุ',
+        height: 'ไม่ระบุ',
+        weight: 'ไม่ระบุ',
+        nationality: 'ไม่ระบุ',
+        other: 'ไม่ระบุ',
+        bio: `ไม่มีข้อมูลเพิ่มเติมเกี่ยวกับ ${actorName}`,
+        videoCount: 0
+      };
+    }
+
+    // ใช้ข้อมูลจากวิดีโอแรกเพื่อสร้างโปรไฟล์
+    const firstVideo = videos[0];
+    
+    return {
+      name: actorName,
+      image: firstVideo.thumbnail,
+      age: 'ไม่ระบุ',
+      height: 'ไม่ระบุ',
+      weight: 'ไม่ระบุ',
+      nationality: 'ไม่ระบุ',
+      other: 'ไม่ระบุ',
+      bio: `${actorName} เป็นนักแสดงที่มีผลงานทั้งหมด ${videos.length} เรื่อง ในหมวดหมู่ ${firstVideo.category}`,
+      videoCount: videos.length
+    };
+  } catch (error) {
+    console.error('Error getting profile details:', error);
+    return {
+      name: actorName,
+      image: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&h=400&fit=crop',
+      age: 'ไม่ระบุ',
+      height: 'ไม่ระบุ',
+      weight: 'ไม่ระบุ',
+      nationality: 'ไม่ระบุ',
+      other: 'ไม่ระบุ',
+      bio: `เกิดข้อผิดพลาดในการโหลดข้อมูลของ ${actorName}`,
+      videoCount: 0
+    };
+  }
+};
+
+export const getProfileImages = async (actorName) => {
+  try {
+    // ดึงวิดีโอของนักแสดง
+    const videos = await getVideosByActor(actorName, 20);
+    
+    // สร้างอาร์เรย์ของภาพ thumbnail จากวิดีโอ
+    const images = videos.map(video => video.thumbnail).filter(Boolean);
+    
+    // หากไม่มีภาพ ให้ใช้ภาพ default
+    if (images.length === 0) {
+      return ['https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&h=400&fit=crop'];
+    }
+    
+    return images;
+  } catch (error) {
+    console.error('Error getting profile images:', error);
+    return ['https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&h=400&fit=crop'];
+  }
+};
+
+export const getProfileVideos = async (actorName) => {
+  try {
+    // ดึงวิดีโอของนักแสดง
+    return await getVideosByActor(actorName, 12);
+  } catch (error) {
+    console.error('Error getting profile videos:', error);
+    return [];
+  }
+};
+

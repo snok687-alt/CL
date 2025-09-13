@@ -3,7 +3,7 @@ import ProfileCard from './ProfileCard';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { getActors } from '../data/videoData';
 
-const ProfileCarousel = () => {
+const ProfileCarousel = ({ isDarkMode = false }) => {
   const scrollRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
@@ -46,6 +46,11 @@ const ProfileCarousel = () => {
 
   const scrollByAmount = 300;
 
+  // Dynamic classes for theming
+  const skeletonClass = isDarkMode ? 'bg-gray-700' : 'bg-gray-300';
+  const buttonBgClass = isDarkMode ? 'bg-gray-800 border-gray-600 hover:bg-gray-700 shadow-gray-900/20' : 'bg-white border-gray-200 shadow-lg hover:bg-gray-100';
+  const buttonTextClass = isDarkMode ? 'text-gray-300' : 'text-gray-700';
+
   if (loading) {
     return (
       <div className="relative max-w-7xl mx-auto">
@@ -53,8 +58,8 @@ const ProfileCarousel = () => {
           {[...Array(10)].map((_, i) => (
             <div key={i} className="flex-shrink-0 w-15 md:w-16 lg:w-20 mx-2">
               <div className="animate-pulse">
-                <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-gray-300 mx-auto"></div>
-                <div className="h-4 bg-gray-300 rounded mt-2 mx-2"></div>
+                <div className={`w-14 h-14 md:w-16 md:h-16 rounded-full ${skeletonClass} mx-auto`}></div>
+                <div className={`h-4 ${skeletonClass} rounded mt-2 mx-2`}></div>
               </div>
             </div>
           ))}
@@ -70,9 +75,10 @@ const ProfileCarousel = () => {
         {canScrollLeft && (
           <button
             onClick={() => (scrollRef.current.scrollLeft -= scrollByAmount)}
-            className="absolute left-0 top-1/3 -translate-y-1/3 z-10 bg-white border border-gray-200 shadow-lg hover:bg-gray-100 transition rounded-full"
+            className={`absolute left-0 top-1/3 -translate-y-1/3 z-10 ${buttonBgClass} transition rounded-full p-1`}
+            aria-label="เลื่อนซ้าย"
           >
-            <ChevronLeft className="w-6 h-6 text-gray-700" />
+            <ChevronLeft className={`w-6 h-6 ${buttonTextClass}`} />
           </button>
         )}
 
@@ -83,7 +89,7 @@ const ProfileCarousel = () => {
         >
           {actors.map((actor) => (
             <div key={actor.id} className="flex-shrink-0 w-15 md:w-16 lg:w-20">
-              <ProfileCard profile={actor} />
+              <ProfileCard profile={actor} isDarkMode={isDarkMode} />
             </div>
           ))}
         </div>
@@ -92,9 +98,10 @@ const ProfileCarousel = () => {
         {canScrollRight && (
           <button
             onClick={() => (scrollRef.current.scrollLeft += scrollByAmount)}
-            className="absolute right-0 top-1/3 -translate-y-1/3 z-10 bg-white border border-gray-200 shadow-lg hover:bg-gray-100 transition rounded-full"
+            className={`absolute right-0 top-1/3 -translate-y-1/3 z-10 ${buttonBgClass} transition rounded-full p-1`}
+            aria-label="เลื่อนขวา"
           >
-            <ChevronRight className="w-6 h-6 text-gray-700" />
+            <ChevronRight className={`w-6 h-6 ${buttonTextClass}`} />
           </button>
         )}
       </div>
