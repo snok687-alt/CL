@@ -54,7 +54,7 @@ const ProfileCarousel = ({ isDarkMode = false }) => {
   if (loading) {
     return (
       <div className="relative max-w-7xl mx-auto">
-        <div className="flex overflow-x-auto pt-2">
+        <div className="flex overflow-x-auto no-scrollbar pt-2">
           {[...Array(10)].map((_, i) => (
             <div key={i} className="flex-shrink-0 w-15 md:w-16 lg:w-20 mx-2">
               <div className="animate-pulse">

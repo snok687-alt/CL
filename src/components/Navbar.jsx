@@ -46,7 +46,7 @@ const Navbar = ({ handleCategoryClick, categories, isDarkMode }) => {
         </div>
       )}
 
-      <div ref={scrollRef} className="overflow-x-auto scrollbar-hide">
+      <div ref={scrollRef} className="overflow-x-auto no-scrollbar">
         <nav className="flex flex-nowrap gap-2 justify-start sm:justify-center px-2">
           {categories.map((category) => (
             <button

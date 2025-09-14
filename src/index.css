@@ -1,18 +1,18 @@
 @import "tailwindcss";
 
+/* index.css หรือ App.css */
 body, #root {
   margin: 0;
   padding: 0;
 }
 
-/* สำหรับเบราว์เซอร์ที่ใช้ WebKit (Chrome, Safari, Edge) */
-.hide-scrollbar::-webkit-scrollbar {
-    width: 0;
-    height: 0;
+/* สำหรับ Chrome, Safari, Edge */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
-/* สำหรับ Firefox */
-.hide-scrollbar {
-    scrollbar-width: none;
+/* สำหรับ Firefox, IE */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
-
