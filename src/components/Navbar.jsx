@@ -1,3 +1,4 @@
+// Navbar.jsx
 import React, { useRef, useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 
@@ -14,12 +15,12 @@ const Navbar = ({ handleCategoryClick, categories, isDarkMode }) => {
 
     const { scrollLeft, scrollWidth, clientWidth } = el;
 
-    setShowLeftIcon(scrollLeft > 10); // มีอะไรอยู่ทางซ้าย
-    setShowRightIcon(scrollLeft + clientWidth < scrollWidth - 10); // มีอะไรอยู่ทางขวา
+    setShowLeftIcon(scrollLeft > 10); // ມີສິ່ງຂອງຢູ່ທາງຊ້າຍ
+    setShowRightIcon(scrollLeft + clientWidth < scrollWidth - 10); // ມີສິ່ງຂອງຢູ່ທາງຂວາ
   };
 
   useEffect(() => {
-    checkScrollPosition(); // เช็คตอนโหลด
+    checkScrollPosition(); // ກວດສອບຕອນໂຫຼດ
     const el = scrollRef.current;
     if (el) {
       el.addEventListener('scroll', checkScrollPosition);
@@ -37,7 +38,7 @@ const Navbar = ({ handleCategoryClick, categories, isDarkMode }) => {
   return (
     <>
     <div className="relative w-full">
-      {/* ปุ่มเลื่อนซ้าย */}
+      {/* ປຸ່ມເລື່ອນຊ້າຍ */}
       {showLeftIcon && (
         <div className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-gradient-to-r from-white/80 dark:from-gray-800/80 px-1">
           <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -66,7 +67,7 @@ const Navbar = ({ handleCategoryClick, categories, isDarkMode }) => {
         </nav>
       </div>
 
-      {/* ปุ่มเลื่อนขวา */}
+      {/* ປຸ່ມເລື່ອນຂວາ */}
       {showRightIcon && (
         <div className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-gradient-to-l from-white/80 dark:from-gray-800/80 px-1">
           <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">

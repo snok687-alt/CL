@@ -1,10 +1,31 @@
+// VideoCard.jsx
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const VideoCard = ({ video, onClick, isDarkMode }) => {
   const navigate = useNavigate();
 
+  // ຟັງຊັນບັນທຶກການເບິ່ງວິດີໂອ
+  const recordView = async (videoId) => {
+    try {
+      await fetch('/api/views/record', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ video_id: videoId }),
+      });
+    } catch (error) {
+      console.error('ເກີດຂໍ້ຜິດພາດໃນການບັນທຶກການເບິ່ງ:', error);
+    }
+  };
+
+  // ເອີ້ນໃຊ້ເມື່ອຜູ້ໃຊ້ຄິກເບິ່ງວິດີໂອ
   const handleVideoClick = () => {
+    // ບັນທຶກການເບິ່ງ
+    recordView(video.id);
+    
+    // ດຳເນີນການເດີມ
     if (onClick) {
       onClick(video);
     } else {
@@ -12,14 +33,14 @@ const VideoCard = ({ video, onClick, isDarkMode }) => {
     }
   };
 
-// ຄຳນວນຍອດເບິ່ງ - ใช้ข้อมูลจาก props โดยตรง
-const formatViews = (views) => {
-  if (views >= 1000000) return `${(views / 1000000).toFixed(1)}M ดู`;
-  if (views >= 1000) return `${(views / 1000).toFixed(0)}K ดู`;
-  return `${views} ดู`;
-};
+  // ຟັງຊັນຈັດຮູບແບບຍອດວິວ
+  const formatViews = (views) => {
+    if (views >= 1000000) return `${(views / 1000000).toFixed(1)}M ເບິ່ງ`;
+    if (views >= 1000) return `${(views / 1000).toFixed(0)}K ເບິ່ງ`;
+    return `${views || 0} ເບິ່ງ`;
+  };
 
-  // ฟังก์ชันตรวจสอบว่าภาพโหลดสำเร็จหรือไม่
+  // ຟັງຊັນກວດສອບວ່າຮູບພາບໂຫຼດສຳເລັດຫຼືບໍ່
   const handleImageError = (e) => {
     e.target.src = '';
   };

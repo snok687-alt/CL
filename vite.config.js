@@ -9,7 +9,7 @@ export default defineConfig({
   ],
   server: {
     host: true,
-    port: 5173,
+    port: 3000,
     proxy: {
       '/api': {
         target: 'https://api.bwzyz.com',

@@ -1,3 +1,4 @@
+// Dashboard.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import Header from './Header';
@@ -14,7 +15,7 @@ const Dashboard = () => {
 
   const isVideoPage = location.pathname.startsWith('/watch');
   const isSearchPage = location.pathname === '/search';
-  const isProfilePage = location.pathname.startsWith('/profile'); // เพิ่มการตรวจสอบหน้า profile
+  const isProfilePage = location.pathname.startsWith('/profile'); // ກວດສອບໜ້າໂປຣໄຟລ໌
 
   const handleSearchChange = (term) => {
     setSearchTerm(term);
@@ -30,8 +31,22 @@ const Dashboard = () => {
         } else {
           navigate('/search', { state: { searchTerm: term } });
         }
-      } else if (isSearchPage) {
-        window.dispatchEvent(new CustomEvent('searchUpdated', { detail: '' }));
+      } else {
+        // ເມື່ອຄົ້ນຫາແບບຄຳວ່າງ
+        if (isSearchPage) {
+          window.dispatchEvent(new CustomEvent('searchUpdated', { detail: '' }));
+          
+          // ກວດສອບວ່າມາຈາກໝວດໝູ່ໃດຫຼືບໍ່
+          const cameFromCategory = location.state?.fromCategory;
+          if (cameFromCategory) {
+            // ກັບຄືນໄປໝວດໝູ່ເດີມ
+            navigate(cameFromCategory);
+          } else {
+            // ກັບຄືນໄປໜ້າຫຼັກ
+            navigate('/');
+          }
+        }
+        // ຫາກຢູ່ໜ້າໝວດໝູ່ແລ້ວ ບໍ່ຕ້ອງເຮັດຫຍັງ
       }
     }, 500);
   };
@@ -56,7 +71,7 @@ const Dashboard = () => {
       lastScrollY.current = currentScrollY;
     };
 
-    // Apply scroll listener for all pages
+    // ໃຊ້ scroll listener ກັບທຸກໜ້າ
     window.addEventListener('scroll', handleScroll, { passive: true });
 
     return () => {
@@ -86,7 +101,7 @@ const Dashboard = () => {
         isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-black'
       }`}
     >
-      {/* แสดง Header เฉพาะเมื่อไม่ใช่หน้า profile หรือ video page (ยกเว้น large screen) */}
+      {/* ສະແດງ Header ເມື່ອບໍ່ແມ່ນໜ້າ profile ຫຼື video page (ຍົກເວັ້ນ large screen) */}
       {!isProfilePage && (!isVideoPage || (isVideoPage && isLargeScreen)) && (
         <Header
           searchTerm={searchTerm}
@@ -98,7 +113,7 @@ const Dashboard = () => {
       )}
 
       <main className={`flex-grow ${isVideoPage ? 'pt-0' : ''}`}>
-        {/* Pass isDarkMode to all child components via context */}
+        {/* ສົ່ງ isDarkMode ໄປຫາ child components ຜ່ານ context */}
         <Outlet context={{ searchTerm, isDarkMode, setSearchTerm }} />
       </main>
     </div>

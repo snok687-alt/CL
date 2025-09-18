@@ -1,9 +1,9 @@
 import axios from 'axios';
 
-// ตั้งค่า axios
+// ຕັ້ງຄ່າ axios
 axios.defaults.timeout = 10000;
 
-// Retry helper
+// ຟັງຊັນຊ່ວຍໃນການລອງໃໝ່
 const retry = async (fn, maxRetries = 2) => {
   for (let i = 0; i < maxRetries; i++) {
     try {
@@ -15,10 +15,11 @@ const retry = async (fn, maxRetries = 2) => {
   }
 };
 
-// Simple cache
+// Cache ງ່າຍໆ ເພື່ອເກັບຂໍ້ມູນໄວ້ຊົ່ວຄາວ
 const cache = new Map();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const CACHE_TTL = 5 * 60 * 1000; // 5 ນາທີ
 
+// ດຶງຂໍ້ມູນຈາກ cache
 const getFromCache = (key) => {
   const item = cache.get(key);
   if (!item || Date.now() - item.time > CACHE_TTL) {
@@ -28,35 +29,55 @@ const getFromCache = (key) => {
   return item.data;
 };
 
+// ເກັບຂໍ້ມູນໃນ cache
 const setToCache = (key, data) => {
-  if (cache.size > 50) cache.clear(); // Simple cleanup
+  if (cache.size > 50) cache.clear(); // ລ້າງ cache ເມື່ອຫຼາຍເກີນໄປ
   cache.set(key, { data, time: Date.now() });
 };
 
-// Core API call
+// ຟັງຊັນຫຼັກໃນການເອີ້ນ API
 const apiCall = async (params) => {
   const url = `/api/?ac=list&${params}`;
   return retry(() => axios.get(url));
 };
 
-// Format video data - ปรับตามโครงสร้าง API ใหม่
-const formatVideo = (item) => ({
+// ຟັງຊັນດຶງຍອດວິວຈາກເຊີບເວີ
+const fetchViewsFromServer = async (videoIds) => {
+  try {
+    const response = await fetch('/api/views/get', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ video_ids: videoIds }),
+    });
+    
+    const viewsData = await response.json();
+    return viewsData;
+  } catch (error) {
+    console.error('ເກີດຂໍ້ຜິດພາດໃນການດຶງຍອດວິວ:', error);
+    return {};
+  }
+};
+
+// ປັບປຸງຟັງຊັນ formatVideo - ຈັດຮູບແບບຂໍ້ມູນວິດີໂອ
+const formatVideo = (item, serverViews = {}) => ({
   id: item.vod_id || item.id,
-  title: item.vod_name || item.title || 'ไม่มีชื่อ',
-  channelName: item.vod_director || item.director || item.type_name || 'ไม่ระบุ',
+  title: item.vod_name || item.title || 'ບໍ່ມີຊື່',
+  channelName: item.vod_director || item.director || item.type_name || 'ບໍ່ລະບຸ',
   actors: item.vod_actor ? item.vod_actor.split(',').map(actor => actor.trim()) : [],
-  views: parseInt(item.vod_hits || item.hits || 0),
+  views: serverViews[item.vod_id || item.id] || parseInt(item.vod_hits || item.hits || 0),
   duration: parseInt(item.vod_duration || item.duration || 0),
-  uploadDate: item.vod_year || item.year || item.vod_time || 'ไม่ระบุ',
+  uploadDate: item.vod_year || item.year || item.vod_time || 'ບໍ່ລະບຸ',
   thumbnail: item.vod_pic || item.pic || '',
   videoUrl: item.vod_play_url || item.url || '',
-  description: item.vod_content || item.content || 'ไม่มีคำอธิบาย',
-  category: item.type_name || item.type || item.vod_class || 'ทั่วไป',
-  type_id: item.type_id || item.tid || '0', // เพิ่ม type_id
+  description: item.vod_content || item.content || 'ບໍ່ມີຄຳອະທິບາຍ',
+  category: item.type_name || item.type || item.vod_class || 'ທົ່ວໄປ',
+  type_id: item.type_id || item.tid || '0', 
   rawData: item
 });
 
-// Get videos with details
+// ດຶງວິດີໂອພ້ອມລາຍລະອຽດ
 const getVideosWithDetails = async (ids) => {
   if (!ids.length) return [];
 
@@ -66,13 +87,12 @@ const getVideosWithDetails = async (ids) => {
     );
     return (response.data?.list || response.data?.data || []).map(formatVideo);
   } catch (error) {
-    console.error('Error getting video details:', error);
+    console.error('ເກີດຂໍ້ຜິດພາດໃນການດຶງລາຍລະອຽດວິດີໂອ:', error);
     return [];
   }
 };
 
-// Main functions
-// ใน videoData.js ตรวจสอบฟังก์ชัน fetchVideosFromAPI
+// ຟັງຊັນຫຼັກ - ດຶງວິດີໂອຈາກ API
 export const fetchVideosFromAPI = async (type_id = '', searchQuery = '', limit = 18, page = 1) => {
   const cacheKey = `videos:${type_id}:${searchQuery}:${limit}:${page}`;
   const cached = getFromCache(cacheKey);
@@ -83,7 +103,6 @@ export const fetchVideosFromAPI = async (type_id = '', searchQuery = '', limit =
     if (type_id && type_id !== 'all') params.set('t', type_id);
     if (searchQuery) params.set('wd', searchQuery);
     params.set('pg', page);
-    // ไม่ส่งพารามิเตอร์ limit ไปยัง API
 
     const response = await apiCall(params.toString());
     const videoList = response.data?.list || response.data?.data || [];
@@ -91,19 +110,30 @@ export const fetchVideosFromAPI = async (type_id = '', searchQuery = '', limit =
     if (!videoList.length) return [];
 
     const ids = videoList.map(item => item.vod_id || item.id).filter(Boolean);
+    
+    // ດຶງຍອດວິວຈາກເຊີບເວີ
+    const serverViews = await fetchViewsFromServer(ids);
+    
     const allVideos = await getVideosWithDetails(ids);
+    
+    // ລວມຍອດວິວຈາກເຊີບເວີ
+    const videosWithServerViews = allVideos.map(video => ({
+      ...video,
+      views: serverViews[video.id] || video.views
+    }));
 
-    // จำกัดจำนวนวิดีโอที่ส่งกลับ
-    const videos = allVideos.slice(0, limit);
+    // ຈຳກັດຈຳນວນວິດີໂອທີ່ສົ່ງກັບ
+    const videos = videosWithServerViews.slice(0, limit);
 
     setToCache(cacheKey, videos);
     return videos;
   } catch (error) {
-    console.error('Error fetching videos:', error);
+    console.error('ເກີດຂໍ້ຜິດພາດໃນການດຶງວິດີໂອ:', error);
     return [];
   }
 };
 
+// ດຶງວິດີໂອຕາມ ID
 export const getVideoById = async (id) => {
   const cacheKey = `video:${id}`;
   const cached = getFromCache(cacheKey);
@@ -114,7 +144,7 @@ export const getVideoById = async (id) => {
       axios.get(`/api/?ac=detail&ids=${id}`)
     );
 
-    // ปรับตามโครงสร้าง response ใหม่
+    // ປັບຕາມໂຄງສ້າງ response ໃໝ່
     const videoData = response.data?.list?.[0] || response.data?.data?.[0];
     if (!videoData) return null;
 
@@ -122,61 +152,67 @@ export const getVideoById = async (id) => {
     setToCache(cacheKey, video);
     return video;
   } catch (error) {
-    console.error('Error fetching video by ID:', error);
+    console.error('ເກີດຂໍ້ຜິດພາດໃນການດຶງວິດີໂອຕາມ ID:', error);
     return null;
   }
 };
 
-// ใน videoData.js แก้ไขฟังก์ชัน searchVideos
-export const searchVideos = async (query, limit = 18) => {  // เปลี่ยนจาก 20 เป็น 18
+// ຄົ້ນຫາວິດີໂອ
+export const searchVideos = async (query, limit = 18) => {
   if (!query.trim()) return [];
   return fetchVideosFromAPI('', query, limit);
 };
 
-export const getVideosByCategory = async (type_id, limit = 18) => {  // เปลี่ยนจาก 20 เป็น 18
+// ດຶງວິດີໂອຕາມໝວດໝູ່
+export const getVideosByCategory = async (type_id, limit = 18) => {
   if (!type_id || type_id === 'all') {
     return fetchVideosFromAPI('', '', limit);
   }
   return fetchVideosFromAPI(type_id, '', limit);
 };
 
-// ใน VideoPlayer.jsx แก้ไขฟังก์ชัน getRelatedVideos
-export const getRelatedVideos = async (currentVideoId, currentVideoTypeId, currentVideoTitle, limit = 18) => {  // เปลี่ยนจาก 12 เป็น 18
+// ດຶງວິດີໂອທີ່ກ່ຽວຂ້ອງ
+export const getRelatedVideos = async (currentVideoId, currentVideoTypeId, currentVideoTitle, limit = 18) => {
   if (!currentVideoTypeId) return [];
 
   try {
-    // ใช้ type_id ในการค้นหาวิดีโอในหมวดหมู่เดียวกัน
+    // ໃຊ້ type_id ໃນການຄົ້ນຫາວິດີໂອໃນໝວດໝູ່ຄືກັນ
     const categoryVideos = await fetchVideosFromAPI(currentVideoTypeId, '', limit);
 
-    // กรองวิดีโอปัจจุบันออกและจำกัดจำนวน
+    // ກອງວິດີໂອປັດຈຸບັນອອກແລະຈຳກັດຈຳນວນ
     const related = categoryVideos
       .filter(video => video.id !== currentVideoId)
       .slice(0, limit);
 
     return related;
   } catch (error) {
-    console.error('Error getting related videos:', error);
+    console.error('ເກີດຂໍ້ຜິດພາດໃນການດຶງວິດີໂອທີ່ກ່ຽວຂ້ອງ:', error);
     return [];
   }
 };
 
+// ດຶງວິດີໂອເພີ່ມເຕີມໃນໝວດໝູ່
 export const getMoreVideosInCategory = async (type_id, excludeIds = [], page = 1, limit = 18) => {
   try {
     const videos = await fetchVideosFromAPI(type_id, '', limit, page);
 
-    // กรองวิดีโอที่ไม่ได้อยู่ใน excludeIds
+    // ກອງວິດີໂອທີ່ບໍ່ໄດ້ຢູ່ໃນ excludeIds
     const filtered = videos.filter(video => !excludeIds.includes(video.id));
+    
+    // ເຮັນລຳດັບຕາມຍອດວິວຈາກສູງໄປຕ່ຳ
+    const sortedByViews = filtered.sort((a, b) => b.views - a.views);
 
     return {
-      videos: filtered,
-      hasMore: videos.length === limit // ตรวจสอบว่ายังมีวิดีโอเหลืออีกหรือไม่
+      videos: sortedByViews,
+      hasMore: videos.length === limit // ກວດສອບວ່າຍັງມີວິດີໂອເຫຼືອຫຼື່ບໍ່
     };
   } catch (error) {
-    console.error('Error getting more videos:', error);
+    console.error('ເກີດຂໍ້ຜິດພາດໃນການດຶງວິດີໂອເພີ່ມເຕີມ:', error);
     return { videos: [], hasMore: false };
   }
 };
 
+// ດຶງລາຍການໝວດໝູ່
 export const getCategories = async () => {
   const cacheKey = 'categories';
   const cached = getFromCache(cacheKey);
@@ -186,7 +222,7 @@ export const getCategories = async () => {
     const response = await apiCall('limit=100');
     const videos = response.data?.list || response.data?.data || [];
 
-    // สร้าง array ของหมวดหมู่จาก type_id และ type_name
+    // ສ້າງ array ຂອງໝວດໝູ່ຈາກ type_id ແລະ type_name
     const categoryMap = new Map();
 
     videos.forEach(item => {
@@ -198,7 +234,7 @@ export const getCategories = async () => {
       }
     });
 
-    // แปลง Map เป็น array ของ object
+    // ແປງ Map ເປັນ array ຂອງ object
     const categories = Array.from(categoryMap, ([id, name]) => ({
       id,
       name
@@ -207,8 +243,8 @@ export const getCategories = async () => {
     setToCache(cacheKey, categories);
     return categories;
   } catch (error) {
-    console.error('Error getting categories:', error);
-    // หมวดหมู่เริ่มต้นตาม type_id
+    console.error('ເກີດຂໍ້ຜິດພາດໃນການດຶງໝວດໝູ່:', error);
+    // ໝວດໝູ່ເລີ່ມຕົ້ນ
     return [
       { id: '1', name: '伦理片' },
       { id: '2', name: '悬疑片' },
@@ -229,6 +265,7 @@ export const getCategories = async () => {
   }
 };
 
+// ດຶງວິດີໂອທັງໝົດໃນໝວດໝູ່
 export const getAllVideosByCategory = async (type_id, limit = 0) => {
   if (limit > 0) return getVideosByCategory(type_id, limit);
 
@@ -256,12 +293,12 @@ export const getAllVideosByCategory = async (type_id, limit = 0) => {
   return allVideos;
 };
 
-// ใน videoData.js แก้ไขฟังก์ชัน getAllVideos
-export const getAllVideos = async (limit = 18) => {  // เปลี่ยนจาก 20 เป็น 18
+// ດຶງວິດີໂອທັງໝົດ
+export const getAllVideos = async (limit = 18) => {
   return fetchVideosFromAPI('', '', limit);
 };
 
-
+// ກວດສອບສະຖານະ API
 export const checkAPIStatus = async () => {
   try {
     const response = await axios.get('/api/?ac=list&limit=1', { timeout: 5000 });
@@ -271,43 +308,40 @@ export const checkAPIStatus = async () => {
   }
 };
 
+// === ຟັງຊັນສຳລັບນັກສະແດງ ===
 
-// นักแสดง
-
-// videoData.js - เพิ่มฟังก์ชันเหล่านี้
-
-// ฟังก์ชันดึงข้อมูลนักแสดงทั้งหมด
+// ດຶງຂໍ້ມູນນັກສະແດງທັງໝົດ
 export const getActors = async (limit = 50) => {
   const cacheKey = `actors:${limit}`;
   const cached = getFromCache(cacheKey);
   if (cached) return cached;
 
   try {
-    // ดึงวิดีโอจำนวนมากเพื่อแยกนักแสดง
+    // ດຶງວິດີໂອຈຳນວນຫຼາຍເພື່ອແຍກນັກສະແດງ
     const videos = await fetchVideosFromAPI('', '', 200);
 
-    // สร้าง Map เพื่อเก็บนักแสดงที่ไม่ซ้ำกัน
+    // ສ້າງ Map ເພື່ອເກັບນັກສະແດງທີ່ບໍ່ຊ້ຳກັນ
     const actorMap = new Map();
 
     videos.forEach(video => {
-      // ใช้ channelName เป็นชื่อนักแสดง (อาจต้องปรับตามโครงสร้างข้อมูลจริง)
+      // ໃຊ້ channelName ເປັນຊື່ນັກສະແດງ (ອາດຕ້ອງປັບຕາມໂຄງສ້າງຂໍ້ມູນຈິງ)
       const actorName = video.channelName;
-      if (actorName && actorName !== 'ไม่ระบุ') {
+      if (actorName && actorName !== 'ບໍ່ລະບຸ') {
         if (!actorMap.has(actorName)) {
           actorMap.set(actorName, {
-            id: actorName, // ใช้ชื่อเป็น ID ชั่วคราว
+            id: actorName, // ໃຊ້ຊື່ເປັນ ID ຊົ່ວຄາວ
             name: actorName,
-            image: video.thumbnail, // ใช้ thumbnail จากวิดีโอแรกที่พบ
+            image: video.thumbnail, // ໃຊ້ thumbnail ຈາກວິດີໂອແຮກທີ່ພົບ
             videoCount: 1
           });
         } else {
-          // อัปเดตจำนวนวิดีโอ
+          // ອັບເດດຈຳນວນວິດີໂອ
           actorMap.get(actorName).videoCount++;
         }
       }
     });
 
-    // แปลง Map เป็น array และเรียงลำดับ
+    // ແປງ Map ເປັນ array ແລະເຮັນລຳດັບ
     const actors = Array.from(actorMap.values())
       .sort((a, b) => b.videoCount - a.videoCount)
       .slice(0, limit);
@@ -315,22 +349,22 @@ export const getActors = async (limit = 50) => {
     setToCache(cacheKey, actors);
     return actors;
   } catch (error) {
-    console.error('Error getting actors:', error);
+    console.error('ເກີດຂໍ້ຜິດພາດໃນການດຶງຂໍ້ມູນນັກສະແດງ:', error);
     return [];
   }
 };
 
-// ฟังก์ชันดึงวิดีโอตามนักแสดง
+// ດຶງວິດີໂອຕາມນັກສະແດງ
 export const getVideosByActor = async (actorName, limit = 50) => {
   const cacheKey = `videosByActor:${actorName}:${limit}`;
   const cached = getFromCache(cacheKey);
   if (cached) return cached;
 
   try {
-    // ดึงวิดีโอทั้งหมดแล้วกรองตามนักแสดง
+    // ດຶງວິດີໂອທັງໝົດແລ້ວກອງຕາມນັກສະແດງ
     const allVideos = await fetchVideosFromAPI('', '', 200);
 
-    // กรองวิดีโอตามนักแสดง
+    // ກອງວິດີໂອຕາມນັກສະແດງ
     const actorVideos = allVideos
       .filter(video => video.channelName === actorName)
       .slice(0, limit);
@@ -338,88 +372,89 @@ export const getVideosByActor = async (actorName, limit = 50) => {
     setToCache(cacheKey, actorVideos);
     return actorVideos;
   } catch (error) {
-    console.error('Error getting videos by actor:', error);
+    console.error('ເກີດຂໍ້ຜິດພາດໃນການດຶງວິດີໂອຂອງນັກສະແດງ:', error);
     return [];
   }
 };
-// เพิ่มฟังก์ชันเหล่านี้ที่ส่วนท้ายของ videoData.js
 
+// ດຶງຂໍ້ມູນລາຍລະອຽດຂອງນັກສະແດງ
 export const getProfileDetails = async (actorName) => {
   try {
-    // ดึงวิดีโอทั้งหมดของนักแสดงคนนี้
+    // ດຶງວິດີໂອທັງໝົດຂອງນັກສະແດງຄົນນີ້
     const videos = await getVideosByActor(actorName, 50);
     
     if (videos.length === 0) {
       return {
         name: actorName,
         image: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&h=400&fit=crop',
-        age: 'ไม่ระบุ',
-        height: 'ไม่ระบุ',
-        weight: 'ไม่ระบุ',
-        nationality: 'ไม่ระบุ',
-        other: 'ไม่ระบุ',
-        bio: `ไม่มีข้อมูลเพิ่มเติมเกี่ยวกับ ${actorName}`,
+        age: 'ບໍ່ລະບຸ',
+        height: 'ບໍ່ລະບຸ',
+        weight: 'ບໍ່ລະບຸ',
+        nationality: 'ບໍ່ລະບຸ',
+        other: 'ບໍ່ລະບຸ',
+        bio: `ບໍ່ມີຂໍ້ມູນເພີ່ມເຕີມເກີ່ຍວກັບ ${actorName}`,
         videoCount: 0
       };
     }
 
-    // ใช้ข้อมูลจากวิดีโอแรกเพื่อสร้างโปรไฟล์
+    // ໃຊ້ຂໍ້ມູນຈາກວິດີໂອແຮກເພື່ອສ້າງໂປຣໄຟລ໌
     const firstVideo = videos[0];
     
     return {
       name: actorName,
       image: firstVideo.thumbnail,
-      age: 'ไม่ระบุ',
-      height: 'ไม่ระบุ',
-      weight: 'ไม่ระบุ',
-      nationality: 'ไม่ระบุ',
-      other: 'ไม่ระบุ',
-      bio: `${actorName} เป็นนักแสดงที่มีผลงานทั้งหมด ${videos.length} เรื่อง ในหมวดหมู่ ${firstVideo.category}`,
+      age: 'ບໍ່ລະບຸ',
+      height: 'ບໍ່ລະບຸ',
+      weight: 'ບໍ່ລະບຸ',
+      nationality: 'ບໍ່ລະບຸ',
+      other: 'ບໍ່ລະບຸ',
+      bio: `${actorName} ເປັນນັກສະແດງທີ່ມີຜົນງານທັງໝົດ ${videos.length} ເລື່ອງ ໃນໝວດໝູ່ ${firstVideo.category}`,
       videoCount: videos.length
     };
   } catch (error) {
-    console.error('Error getting profile details:', error);
+    console.error('ເກີດຂໍ້ຜິດພາດໃນການດຶງຂໍ້ມູນລາຍລະອຽດ:', error);
     return {
       name: actorName,
       image: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&h=400&fit=crop',
-      age: 'ไม่ระบุ',
-      height: 'ไม่ระบุ',
-      weight: 'ไม่ระบุ',
-      nationality: 'ไม่ระบุ',
-      other: 'ไม่ระบุ',
-      bio: `เกิดข้อผิดพลาดในการโหลดข้อมูลของ ${actorName}`,
+      age: 'ບໍ່ລະບຸ',
+      height: 'ບໍ່ລະບຸ',
+      weight: 'ບໍ່ລະບຸ',
+      nationality: 'ບໍ່ລະບຸ',
+      other: 'ບໍ່ລະບຸ',
+      bio: `ເກີດຂໍ້ຜິດພາດໃນການໂຫຼດຂໍ້ມູນຂອງ ${actorName}`,
       videoCount: 0
     };
   }
 };
 
+// ດຶງຮູບພາບຂອງນັກສະແດງ
 export const getProfileImages = async (actorName) => {
   try {
-    // ดึงวิดีโอของนักแสดง
+    // ດຶງວິດີໂອຂອງນັກສະແດງ
     const videos = await getVideosByActor(actorName, 20);
     
-    // สร้างอาร์เรย์ของภาพ thumbnail จากวิดีโอ
+    // ສ້າງອາຣເຣຂອງຮູບ thumbnail ຈາກວິດີໂອ
     const images = videos.map(video => video.thumbnail).filter(Boolean);
     
-    // หากไม่มีภาพ ให้ใช้ภาพ default
+    // ຫາກບໍ່ມີຮູບ ໃຫ້ໃຊ້ຮູບ default
     if (images.length === 0) {
       return ['https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&h=400&fit=crop'];
     }
     
     return images;
   } catch (error) {
-    console.error('Error getting profile images:', error);
+    console.error('ເກີດຂໍ້ຜິດພາດໃນການດຶງຮູບພາບ:', error);
     return ['https://images.unsplash.com/photo-1494790108755-2616b612b786?w=400&h=400&fit=crop'];
   }
 };
 
+// ດຶງວິດີໂອຂອງນັກສະແດງສຳລັບໂປຣໄຟລ໌
 export const getProfileVideos = async (actorName) => {
   try {
-    // ดึงวิดีโอของนักแสดง
+    // ດຶງວິດີໂອຂອງນັກສະແດງ
     return await getVideosByActor(actorName, 12);
   } catch (error) {
-    console.error('Error getting profile videos:', error);
+    console.error('ເກີດຂໍ້ຜິດພາດໃນການດຶງວິດີໂອໂປຣໄຟລ໌:', error);
     return [];
   }
 };
-
