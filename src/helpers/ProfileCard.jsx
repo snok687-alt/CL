@@ -1,39 +1,124 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-// ກາດສະແດງໂປຣໄຟລ໌ຂອງນັກສະແດງແຕ່ລະຄົນ
 const ProfileCard = ({ profile, isDarkMode = false }) => {
   const navigate = useNavigate();
+  const [isHovered, setIsHovered] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [expandedPosition, setExpandedPosition] = useState({ top: 0, left: 0 });
+  const [expandedStyle, setExpandedStyle] = useState({});
+  const [arrowClass, setArrowClass] = useState('arrow-center');
+  const cardRef = useRef(null);
+  const expandedRef = useRef(null);
 
-  // ຟັງຊັນສຳລັບການກົດເພື່ອໄປຫາໜ້າໂປຣໄຟລ໌ຂອງນັກສະແດງ
   const handleClick = () => {
     navigate(`/profile/${encodeURIComponent(profile.name)}`);
   };
 
-  // ກຳນົດ CSS class ຕາມໂໝດແສງສະຫວ່າງ/ມືດ
+  // อัพเดทตำแหน่งการแสดงภาพขยาย
+  useEffect(() => {
+    if (!isHovered || !cardRef.current) return;
+
+    const updateExpandedPosition = () => {
+      const cardRect = cardRef.current.getBoundingClientRect();
+      const scrollY = window.scrollY;
+      
+      // คำนวณตำแหน่งให้แสดงด้านล่างของโปรไฟล์
+      const top = cardRect.bottom + scrollY + 10;
+      const left = cardRect.left + (cardRect.width / 2);
+      
+      setExpandedPosition({ top, left });
+
+      // ตรวจสอบและปรับตำแหน่งให้ไม่ถูกตัดที่ขอบหน้าจอ
+      const expandedWidth = 192; // w-48 = 192px
+      const viewportWidth = window.innerWidth;
+      const expandedHalfWidth = expandedWidth / 2;
+      
+      let adjustedLeft = left;
+      let newArrowClass = 'arrow-center';
+
+      // ตรวจสอบขอบซ้าย (เหลือที่ว่างน้อยกว่า 10px)
+      if (left - expandedHalfWidth < 10) {
+        adjustedLeft = expandedHalfWidth + 10;
+        newArrowClass = 'arrow-left';
+      }
+      // ตรวจสอบขอบขวา (เหลือที่ว่างน้อยกว่า 10px)
+      else if (left + expandedHalfWidth > viewportWidth - 10) {
+        adjustedLeft = viewportWidth - expandedHalfWidth - 10;
+        newArrowClass = 'arrow-right';
+      }
+
+      setExpandedStyle({
+        top: `${top}px`,
+        left: `${adjustedLeft}px`,
+        transform: 'translateX(-50%)'
+      });
+
+      setArrowClass(newArrowClass);
+    };
+
+    updateExpandedPosition();
+    window.addEventListener('resize', updateExpandedPosition);
+    window.addEventListener('scroll', updateExpandedPosition);
+    
+    return () => {
+      window.removeEventListener('resize', updateExpandedPosition);
+      window.removeEventListener('scroll', updateExpandedPosition);
+    };
+  }, [isHovered]);
+
+  // Dynamic classes based on theme
   const hoverBgClass = isDarkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-50';
   const borderClass = isDarkMode ? 'border-gray-600 hover:border-blue-400' : 'border-gray-200 hover:border-blue-400';
   const textClass = isDarkMode ? 'text-gray-200 hover:text-blue-400' : 'text-gray-800 hover:text-blue-600';
 
   return (
     <div
+      ref={cardRef}
       onClick={handleClick}
-      className={`cursor-pointer hover:shadow-lg transition-all duration-300 text-center rounded-full ${hoverBgClass}`}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onTouchStart={() => setIsHovered(true)}
+      onTouchEnd={() => setIsHovered(false)}
+      className={`profile-card cursor-pointer hover:shadow-lg transition-all duration-300 text-center rounded-lg ${hoverBgClass} relative`}
     >
       <div className="relative group">
-        {/* ຮູບພາບໂປຣໄຟລ໌ຂອງນັກສະແດງ */}
         <img
           src={profile.image}
           alt={profile.name}
-          className={`w-14 h-14 md:w-16 md:h-16 rounded-full mx-auto object-cover border-2 ${borderClass} transition-colors group-hover:scale-105 transform duration-200`}
+          onLoad={() => setImageLoaded(true)}
           onError={(e) => {
-            // ຖ້າຮູບໂຫຼດບໍ່ໄດ້ ໃຫ້ລຶບ src ອອກ
             e.target.src = '';
+            setImageLoaded(true);
           }}
+          className={`profile-image w-14 h-16 md:w-16 md:h-18 rounded-md mx-auto object-cover border-1 ${borderClass} transition-all duration-300 ${
+            isHovered ? 'scale-90 opacity-80' : 'group-hover:scale-105'
+          }`}
         />
+        
+        {/* Expanded Image - แสดงด้านล่าง */}
+        {isHovered && imageLoaded && (
+          <div
+            ref={expandedRef}
+            className="expanded-image-container fixed z-50 pointer-events-none"
+            style={expandedStyle}
+          >
+            <div className="expanded-image-wrapper bg-white dark:bg-gray-800 rounded-lg shadow-2xl pt-2 relative">
+              <img
+                src={profile.image}
+                alt={profile.name}
+                className="expanded-image w-40 h-48 md:w-48 md:h-56 object-cover rounded-md"
+              />
+              {/* ลูกศรชี้บอกตำแหน่ง - ปรับตามขอบ */}
+              <div 
+                className={`absolute -top-2 w-3 h-3 bg-white dark:bg-gray-800 border-l border-t border-gray-200 dark:border-gray-600 ${arrowClass}`}
+              ></div>
+            </div>
+          </div>
+        )}
       </div>
-      {/* ຊື່ຂອງນັກສະແດງ */}
-      <h3 className={`text-sm md:text-base font-semibold pt-1 truncate px-1 transition-colors ${textClass}`}>
+      
+      <h3 className={`text-sm md:text-base font-semibold truncate px-1 transition-colors ${textClass}`}>
         {profile.name}
       </h3>
     </div>

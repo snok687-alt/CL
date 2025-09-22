@@ -103,11 +103,11 @@ const SearchResults = () => {
     return (
       <div className={`min-h-screen p-4 md:p-6 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-100'}`}>
         <div className="max-w-7xl mx-auto">
-          <div className="text-center py-12">
+          <div className="text-center py-20 md:py-70">
             {/* Loading spinner */}
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500 mx-auto"></div>
             <p className={`mt-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-              {isHomePage ? 'กำลังโหลดวิดีโอ...' : 'กำลังค้นหาวิดีโอ...'}
+              {isHomePage ? 'ກຳລັງໂຫຼດວີດີໂອ...' : 'ກຳລັງຄົ້ນຫາວີດີໂອ...'}
             </p>
           </div>
         </div>

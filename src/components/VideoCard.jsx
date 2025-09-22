@@ -77,6 +77,7 @@ const VideoCard = ({ video, onClick, isDarkMode }) => {
 
         <div className={`flex items-center justify-around text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'
           }`}>
+          <span className='text-sx'>{video.id}</span>
           <span className='text-sx'>{formatViews(video.views)}</span>
           <span className="mx-1.5">•</span>
           <span className='text-sx'>{video.uploadDate}</span>
