@@ -67,6 +67,16 @@ const ProfileCard = ({ profile, isDarkMode = false }) => {
     };
   }, [isHovered]);
 
+  // เพิ่ม useEffect เพื่อปิดภาพขยายเมื่อ scroll
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsHovered(false);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   // Dynamic classes based on theme
   const hoverBgClass = isDarkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-50';
   const borderClass = isDarkMode ? 'border-gray-600 hover:border-blue-400' : 'border-gray-200 hover:border-blue-400';
@@ -107,7 +117,7 @@ const ProfileCard = ({ profile, isDarkMode = false }) => {
               <img
                 src={profile.image}
                 alt={profile.name}
-                className="expanded-image w-40 h-48 md:w-48 md:h-56 object-cover rounded-md"
+                className="expanded-image w-40 h-48 md:w-48 md:h-64 object-cover rounded-md"
               />
               {/* ลูกศรชี้บอกตำแหน่ง - ปรับตามขอบ */}
               <div 

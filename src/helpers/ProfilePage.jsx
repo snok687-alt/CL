@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   getActorProfile,
   getActorGalleryImages,
-  getRelatedActorsData
 } from '../data/actorData';
 import { getVideosByActor } from '../data/videoData';
 
@@ -13,22 +12,20 @@ const ProfilePage = ({ isDarkMode = false }) => {
   const [profile, setProfile] = useState(null);
   const [images, setImages] = useState([]);
   const [videos, setVideos] = useState([]);
-  const [relatedActors, setRelatedActors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showImageModal, setShowImageModal] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [showAllImages, setShowAllImages] = useState(false);
 
   // Theme styles
-  const bg = isDarkMode ? 'bg-gray-900' : 'bg-gray-100';
-  const text = isDarkMode ? 'text-white' : 'text-white';
-  const textSec = isDarkMode ? 'text-white' : 'text-white';
-  const skeleton = isDarkMode ? 'bg-gray-700' : 'bg-gray-300';
-  const btn = isDarkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600';
+  const bg = 'bg-gray-100';
+  const text = 'text-white';
+  const textSec =  'text-white';
+  const skeleton = 'bg-gray-300';
+  const btn = 'bg-blue-500 hover:bg-blue-600';
 
   // Event handlers
   const goToVideo = (id) => navigate(`/watch/${id}`);
-  const goToActor = (name) => navigate(`/profile/${encodeURIComponent(name)}`);
   const openImage = (i) => { setSelectedImageIndex(i); setShowImageModal(true); };
   const closeModal = () => setShowImageModal(false);
   const prevImage = () => setSelectedImageIndex(prev => prev === 0 ? images.length - 1 : prev - 1);
@@ -41,13 +38,11 @@ const ProfilePage = ({ isDarkMode = false }) => {
         const name = decodeURIComponent(profileName);
         const profileData = getActorProfile(name);
         const imageData = getActorGalleryImages(name).filter(img => img?.trim());
-        const relatedData = getRelatedActorsData(name, 6);
         const videoData = await getVideosByActor(name);
 
         setProfile(profileData);
         setImages(imageData);
         setVideos(videoData);
-        setRelatedActors(relatedData);
       } catch (err) {
         console.error('Error:', err);
       } finally {
@@ -67,7 +62,6 @@ const ProfilePage = ({ isDarkMode = false }) => {
       </div>
     );
   }
-
   if (!profile) {
     return (
       <div className={`p-8 max-w-screen-2xl mx-auto text-center min-h-screen ${bg}`}>
@@ -76,9 +70,7 @@ const ProfilePage = ({ isDarkMode = false }) => {
       </div>
     );
   }
-
   const displayedImages = showAllImages ? images : images.slice(0, 4);
-
   return (
     <div className="relative max-w-screen-2xl mx-auto xl:px-2 min-h-screen">
       {/* Background with dark overlay for better text visibility */}
@@ -92,19 +84,16 @@ const ProfilePage = ({ isDarkMode = false }) => {
             transform: 'scale(1.05)'
           }}
         />
-
         {/* Dark Overlay for better text visibility */}
         <div className="absolute inset-0 bg-black/70" />
-
         {/* Additional gradient for better text readability */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/50" />
       </div>
-
       {/* Content Container */}
       <div className="relative z-10">
         <div className="flex flex-col xl:flex-row gap-4">
           {/* Profile Info */}
-          <div className="md:flex flex-col md:justify-center items-center md:min-h-screen w-full xl:w-1/3 space-y-4 md:mt-0 md:mr-40">
+          <div className="md:flex flex-col md:justify-center items-center md:min-h-screen w-full xl:w-1/3 space-y-4 md:mt-0 space-x-0">
             <div className={`flex md:flex-row gap-x-2 p-4 items-center justify-between md:items-start space-x-3.5`}>
               <div className="relative flex-shrink-0">
                 <img src={profile.profileImage} alt={profile.name}
@@ -114,51 +103,37 @@ const ProfilePage = ({ isDarkMode = false }) => {
                   <div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs shadow-lg">✓</div>
                 )}
               </div>
-
               <div className="space-y-4 text-left md:text-left">
                 <h1 className={`text-xl font-bold ${text} drop-shadow-lg text-shadow-lg`}>{profile.name}</h1>
                 {profile.alternativeName && <p className={`text-base ${textSec} italic drop-shadow-md`}>{profile.alternativeName}</p>}
                 {['age', 'height', 'weight', 'nationality', 'other'].map(key =>
                   profile[key] && profile[key] !== 'ไม่ระบุ' && (
                     <p key={key} className={`text-base ${textSec} drop-shadow-md font-medium`}>
-                      {key === 'age' ? 'อายุ' : key === 'height' ? 'ความสูง' : key === 'weight' ? 'น้ำหนัก' : key === 'nationality' ? 'สัชชาติ' : 'อื่นๆ'}: {profile[key]}
+                      {key === 'age'
+                        ? '年龄'
+                        : key === 'height'
+                          ? '身高'
+                          : key === 'weight'
+                            ? '体重'
+                            : key === 'nationality'
+                              ? '国籍'
+                              : '其他'}: {profile[key]}
                     </p>
                   )
                 )}
                 <p className={`text-base ${textSec} font-semibold drop-shadow-md`}>จำนวนวิดีโอ: {profile.videoCount} เรื่อง</p>
               </div>
             </div>
-
-            <div className={`p-4 rounded-lg md:mr-50`}>
+            <div className={`p-4 rounded-lg`}>
               <h2 className={`text-xl font-semibold mb-2 ${text} drop-shadow-lg`}>ข้อมูลเพิ่มเติม</h2>
               <p className={`leading-relaxed text-base ${textSec} drop-shadow-md`}>{profile.bio}</p>
             </div>
-
-            {relatedActors.length > 0 && (
-              <div className={`p-4   rounded-lg mx-4`}>
-                <h2 className={`text-xl font-semibold mb-4 ${text} drop-shadow-lg`}>นักแสดงที่เกี่ยวข้อง</h2>
-                <div className="grid grid-cols-2 gap-3">
-                  {relatedActors.map((actor) => (
-                    <div key={actor.id} onClick={() => goToActor(actor.name)}
-                      className={`flex items-center space-x-3 p-2 rounded-lg cursor-pointer transition-all hover:shadow-lg  bg-black/30 hover:bg-black/40 border border-white/10`}>
-                      <img src={actor.image} alt={actor.name} className="w-10 h-10 rounded-full object-cover ring-2 ring-white/30"
-                        onError={(e) => e.target.src = `https://picsum.photos/400/400?random=${actor.name.charCodeAt(0)}`} />
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-sm font-medium truncate ${text} drop-shadow-md`}>{actor.name}</p>
-                        <p className={`text-xs ${textSec} drop-shadow`}>{actor.videoCount} วิดีโอ</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
-
           {/* Images & Videos */}
           <div className="w-full xl:w-2/3 xl:max-h-screen xl:overflow-y-auto no-scrollbar">
             {images.length > 0 && (
-              <div className={`p-2 rounded-lg`}>
-                <h2 className={`text-xl font-semibold mb-4 text-center ${text} drop-shadow-lg`}>รูปภาพ</h2>
+              <div className={`p-2 pt-6 rounded-lg`}>
+                <h2 className={`text-xl font-semibold mb-4 text-left ${text} drop-shadow-lg`}>图片</h2>
                 <div className="columns-2 md:columns-4 gap-2 space-y-2">
                   {displayedImages.map((img, index) => (
                     <img
@@ -181,9 +156,8 @@ const ProfilePage = ({ isDarkMode = false }) => {
                 )}
               </div>
             )}
-
             <div className={`px-2 rounded-lg `}>
-              <h2 className={`text-2xl font-bold mb-4 text-left ${text} drop-shadow-lg`}>วิดีโอ</h2>
+              <h2 className={`text-2xl font-bold mb-4 text-left ${text} drop-shadow-lg`}>视频</h2>
               {videos.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-2">
                   {videos.map((video) => (
@@ -273,7 +247,6 @@ const ImageModal = ({ images, selectedImageIndex, onClose, onPrev, onNext, isDar
               onClick={onNext}>&#10095;</button>
           </>
         )}
-
         {/* Image container with improved sizing */}
         <div className="relative flex items-center justify-center w-full h-full p-16">
           <img

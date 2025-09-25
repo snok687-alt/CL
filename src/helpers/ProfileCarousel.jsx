@@ -45,21 +45,7 @@ const ProfileCarousel = ({ isDarkMode = false }) => {
     }
   }, [actors]);
 
-  // ปิดการขยายภาพเมื่อ scroll
-  useEffect(() => {
-    const handleScroll = () => {
-      setActiveExpanded(null);
-    };
 
-    if (scrollRef.current) {
-      scrollRef.current.addEventListener('scroll', handleScroll);
-      return () => {
-        if (scrollRef.current) {
-          scrollRef.current.removeEventListener('scroll', handleScroll);
-        }
-      };
-    }
-  }, []);
 
   const scrollByAmount = 300;
 
@@ -72,8 +58,8 @@ const ProfileCarousel = ({ isDarkMode = false }) => {
     return (
       <div className="relative max-w-7xl mx-auto">
         <div className="flex overflow-x-auto no-scrollbar pt-2">
-          {[...Array(10)].map((_, i) => (
-            <div key={i} className="flex-shrink-0 w-15 md:w-16 lg:w-20 mx-2">
+          {[...Array(15)].map((_, i) => (
+            <div key={i} className="flex-shrink-0 w-15 md:w-16 lg:w-20 ">
               <div className="animate-pulse">
                 <div className={`w-14 h-14 md:w-16 md:h-16 rounded-md ${skeletonClass} mx-auto`}></div>
                 <div className={`h-4 ${skeletonClass} rounded mt-2 mx-2`}></div>
