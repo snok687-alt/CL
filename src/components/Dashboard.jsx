@@ -5,7 +5,7 @@ import Header from './Header';
 
 const Dashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(true);
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   const [isLargeScreen, setIsLargeScreen] = useState(window.innerWidth >= 1024);
   const lastScrollY = useRef(0);

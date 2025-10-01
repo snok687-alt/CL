@@ -7,7 +7,7 @@ const SearchResults = () => {
   // ດຶງຂໍ້ມູນຈາກ React Router
   const location = useLocation();
   const { isDarkMode, searchTerm, setSearchTerm } = useOutletContext();
-  
+
   // State ສຳລັບຈັດການຂໍ້ມູນ
   const [results, setResults] = useState([]); // ເກັບຜົນການຄ້ນຫາ
   const [loading, setLoading] = useState(true); // ສະຖານະການໂຫລດ
@@ -35,7 +35,7 @@ const SearchResults = () => {
       setResults([]);
       setLoading(false);
     }
-    
+
     // Cleanup function ສຳລັບຍົກເລີກ API calls ທີ່ບໍ່ຈຳເປັນ
     return () => {
       // ປົກກະຕິຈະໃຊ້ AbortController ໃນນີ້
@@ -107,7 +107,8 @@ const SearchResults = () => {
             {/* Loading spinner */}
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500 mx-auto"></div>
             <p className={`mt-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-              {isHomePage ? 'ກຳລັງໂຫຼດວີດີໂອ...' : 'ກຳລັງຄົ້ນຫາວີດີໂອ...'}
+              {isHomePage ? '正在加载视频...' : '正在搜索视频...'}
+
             </p>
           </div>
         </div>
@@ -121,7 +122,13 @@ const SearchResults = () => {
       <div className="max-w-7xl mx-auto">
         {/* ຫົວຂໍ້ຫຼັກ */}
         <h1 className={`text-xl md:text-2xl text-start font-bold mb-6 ${isDarkMode ? 'text-white' : 'text-black'}`}>
-          {isHomePage ? '国产视频' : searchQuery ? `ผลการค้นหาสำหรับ: "${searchQuery}"` : 'ค้นหาวิดีโอ'}
+          {isHomePage
+            ? '国产视频'
+            : searchQuery
+              ? `搜索结果: "${searchQuery}"`
+              : '搜索视频'
+          }
+
         </h1>
 
         {/* ສະແດງຜົນລັບ ຫຼື ຂໍ້ຄວາມເມື່ອບໍ່ມີຂໍ້ມູນ */}
@@ -131,8 +138,9 @@ const SearchResults = () => {
             <svg className="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
-            <p className="text-lg mb-2">ไม่พบผลลัพธ์การค้นหา</p>
-            <p className="text-sm">ลองใช้คำค้นหาอื่นหรือลองค้นด้วยแท็ก</p>
+            <p className="text-lg mb-2">未找到搜索结果</p>
+            <p className="text-sm">试试其他关键词或标签进行搜索</p>
+
           </div>
         ) : results.length === 0 && isHomePage ? (
           // ບໍ່ມີວິດີໂອໃນໝວດໝູ່
@@ -140,7 +148,8 @@ const SearchResults = () => {
             <svg className="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
-            <p className="text-lg mb-2">ไม่มีวิดีโอในหมวดหมู่นี้</p>
+            <p className="text-lg mb-2">此类别中没有视频</p>
+
           </div>
         ) : results.length === 0 ? (
           // ເລີ່ມຕົ້ນການຄ້ນຫາ
@@ -148,18 +157,19 @@ const SearchResults = () => {
             <svg className="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
-            <p className="text-lg mb-2">เริ่มต้นการค้นหา</p>
-            <p className="text-sm">พิมพ์คำค้นหาในช่องด้านบนเพื่อค้นหาวิดีโอ</p>
+            <p className="text-lg mb-2">开始搜索</p>
+            <p className="text-sm">在上方输入关键词以搜索视频</p>
+
           </div>
         ) : (
           <>
             {/* ສະແດງຈຳນວນຜົນລັບ (ສຳລັບການຄ້ນຫາເທົ່ານັ້ນ) */}
             {!isHomePage && (
               <p className={`mb-6 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                พบ {results.length} วิดีโอ
+                找到 {results.length} 视频
               </p>
             )}
-            
+
             {/* Grid ສະແດງວິດີໂອ */}
             <div className="grid grid-cols-2 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-4">
               {results.map((video) => (

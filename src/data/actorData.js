@@ -85,7 +85,7 @@ const actorProfiles = new Map([
   ["藤井蘭々", {
     "primaryName": "藤井蘭々",
     "alternativeNames": ["藤井蘭々", "蜜美杏"],
-    "profileImage": "https://www.news-postseven.com/uploads/2023/08/25/fujii_ranran-500x750.jpg",
+    "profileImage": "https://artjav.com/wp-content/uploads/fns-004-d131.jpg",
     "backgroundImage": "https://pics.dmm.co.jp/digital/video/1fns00039/1fns00039pl.jpg",
     "age": "24",
     "height": "170 cm",
@@ -94,7 +94,7 @@ const actorProfiles = new Map([
     "other": "AV出道于2020年4月25日（原名：蜜美杏），2022年7月更名并更换经纪公司，2023年4月回归",
     "bio": "藤井蘭々（ふじい らんらん，原名：蜜美杏），2000年11月15日出生于日本，是一位备受瞩目的成人影片女演员。她于2020年4月25日在Prestige和Eightman Production旗下以蜜美杏的名义出道，凭借170厘米的身高、纤细的身材（体重48公斤）以及B86(F)-W58-H89的完美比例迅速走红。她以性感而优雅的外型和多样化的表演风格吸引了大量粉丝。2022年7月，她更换艺名并转投新经纪公司，短暂休息后于2023年4月强势回归，继续活跃于成人娱乐行业。藤井蘭々の作品以高质量和高人气著称，她的职业生涯展现了出色的适应能力和持久的吸引力，对日本AV界产生了深远影响。",
     galleryImages: [
-      "https://www.news-postseven.com/uploads/2023/08/25/fujii_ranran-500x750.jpg",
+      "https://artjav.com/wp-content/uploads/fns-004-d131.jpg",
       "https://cdn.faleno.net/top/wp-content/uploads/2025/06/FNS-039_2125.jpg?resize=470:*&output-quality=60",
       "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS-p4UydEWOxfook8JvLyRgfbjW-UsDHYbKgCI6Di9DuET-AqeFa0fxLTue&s=10",
       "https://jav.wine/wp-content/uploads/2025/month-02/FSDSS-975.jpg",
@@ -113,7 +113,7 @@ const actorProfiles = new Map([
       "https://image.av-event.jp/contents/images/32443/1126ff6d84bb70474584cb7c10bc0f40.jpg",
       "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTSQkHZbB3WCT6DzZODKMMA-gSQ4TGR1YO8CPTbz6aCRI8XQU6M958KZwps&s=10",
       "https://cdn.faleno.net/top/wp-content/uploads/2023/03/fujii.jpg?resize=520:*&output-quality=60",
-      "https://artjav.com/wp-content/uploads/fns-004-d131.jpg"
+      "https://www.news-postseven.com/uploads/2023/08/25/fujii_ranran-500x750.jpg",
     ]
   }],
 
@@ -633,11 +633,25 @@ const hasActorProfile = (actorName) => {
   return actorProfiles.has(primaryName);
 };
 
-// สร้างดัชนีสำหรับการค้นหานักแสดงไวขึ้น
+// ฟังก์ชันนับจำนวน vod_id ที่แยกด้วย comma (ปรับปรุงใหม่)
+const countVideoIds = (vodIdString) => {
+  if (!vodIdString || typeof vodIdString !== 'string') return 0;
+  
+  // แยก vod_id ด้วย comma และนับจำนวนที่ไม่ใช่ค่าว่าง
+  return vodIdString
+    .split(',')
+    .map(id => id.trim())
+    .filter(id => id && id.length > 0)
+    .length;
+};
+
+// สร้างดัชนีสำหรับการค้นหานักแสดงไวขึ้น (ปรับปรุงใหม่)
 const createActorIndex = () => {
   const actorIndex = new Map();
 
   actorsDatabase.forEach(item => {
+    const videoCount = countVideoIds(item.vod_id);
+    
     item.actors.forEach(actor => {
       // ใช้ primary name เป็น key
       const primaryName = getPrimaryName(actor);
@@ -645,9 +659,12 @@ const createActorIndex = () => {
       if (!actorIndex.has(primaryName)) {
         actorIndex.set(primaryName, []);
       }
+      
+      // เก็บข้อมูลรวมทั้งจำนวนวิดีโอ
       actorIndex.get(primaryName).push({
         vod_id: item.vod_id,
-        title: item.title
+        title: item.title,
+        videoCount: videoCount
       });
     });
   });
@@ -655,13 +672,15 @@ const createActorIndex = () => {
   return actorIndex;
 };
 
-// ดึงข้อมูลนักแสดงทั้งหมด (ปรับปรุงให้ไม่ซ้ำ)
+// ดึงข้อมูลนักแสดงทั้งหมด (ปรับปรุงให้ไม่ซ้ำ และนับจำนวนวิดีโอที่ถูกต้อง)
 export const getActorsData = (limit = 50) => {
   const actorIndex = createActorIndex();
   const actorStats = new Map();
 
   // นับจำนวนวิดีโอของแต่ละนักแสดง โดยใช้ primary name
   actorsDatabase.forEach(item => {
+    const totalVideosInItem = countVideoIds(item.vod_id);
+    
     item.actors.forEach(actor => {
       const primaryName = getPrimaryName(actor);
 
@@ -682,10 +701,11 @@ export const getActorsData = (limit = 50) => {
       // ตรวจสอบไม่ให้นับซ้ำ
       const isDuplicate = actorData.videos.some(v => v.vod_id === item.vod_id);
       if (!isDuplicate) {
-        actorData.videoCount++;
+        actorData.videoCount += totalVideosInItem; // นับจำนวนวิดีโอจริงจาก vod_id
         actorData.videos.push({
           vod_id: item.vod_id,
-          title: item.title
+          title: item.title,
+          videoCount: totalVideosInItem
         });
       }
     });
@@ -699,7 +719,7 @@ export const getActorsData = (limit = 50) => {
   return actors;
 };
 
-// ดึงข้อมูลโปรไฟล์นักแสดง (ปรับปรุงให้ดึงแค่ 1 profile)
+// ดึงข้อมูลโปรไฟล์นักแสดง (ปรับปรุงให้ดึงแค่ 1 profile และนับวิดีโอที่ถูกต้อง)
 export const getActorProfile = (actorName) => {
   const primaryName = getPrimaryName(actorName);
   const actorIndex = createActorIndex();
@@ -707,10 +727,13 @@ export const getActorProfile = (actorName) => {
   const profile = actorProfiles.get(primaryName);
 
   if (profile) {
+    // นับจำนวนวิดีโอรวมจากทุก vod_id
+    const totalVideoCount = actorVideos.reduce((sum, item) => sum + item.videoCount, 0);
+    
     return {
       ...profile,
       name: profile.primaryName, // ใช้ primary name เป็นชื่อหลัก
-      videoCount: actorVideos.length,
+      videoCount: totalVideoCount, // จำนวนวิดีโอที่ถูกต้อง
       allNames: [profile.primaryName, ...profile.alternativeNames] // รายการชื่อทั้งหมด
     };
   }
@@ -726,7 +749,7 @@ export const getActorGalleryImages = (actorName) => {
   if (profile && profile.galleryImages) {
     return profile.galleryImages;
   }
-  return images;
+  return [];
 };
 
 // ดึงวิดีโอของนักแสดง
@@ -766,13 +789,14 @@ export const getRelatedActorsData = (actorName, limit = 5) => {
 
   for (const name of relatedActorNames) {
     const actorVideos = actorIndex.get(name) || [];
+    const totalVideoCount = actorVideos.reduce((sum, item) => sum + item.videoCount, 0);
     const profile = actorProfiles.get(name);
     relatedActorDetails.push({
       id: name,
       name: name,
       alternativeNames: profile?.alternativeNames || [],
       image: profile?.profileImage || `https://picsum.photos/400/400?random=${name.charCodeAt(0)}`,
-      videoCount: actorVideos.length
+      videoCount: totalVideoCount
     });
   }
 
@@ -782,3 +806,28 @@ export const getRelatedActorsData = (actorName, limit = 5) => {
 // ส่งออกข้อมูลสำหรับใช้งาน
 export { actorsDatabase, actorProfiles, getPrimaryName, hasActorProfile };
 
+// ฟังก์ชันคำนวณอันดับนักแสดงตามยอดวิว
+export const getActorsWithRanking = (limit = 20) => {
+  const actors = getActorsData(limit);
+  
+  // สมมติว่ายอดวิวมาจาก videoCount หรือข้อมูลอื่นๆ
+  // คุณอาจต้องปรับปรุงส่วนนี้ให้ดึงยอดวิวจริงจาก API
+  const actorsWithViews = actors.map(actor => ({
+    ...actor,
+    totalViews: actor.videoCount * 1000 // สมมติยอดวิว
+  }));
+
+  // จัดเรียงตามยอดวิวจากมากไปน้อย
+  const sortedActors = [...actorsWithViews].sort((a, b) => b.totalViews - a.totalViews);
+  
+  // กำหนดอันดับให้กับ 3 อันดับแรก
+  return sortedActors.map((actor, index) => ({
+    ...actor,
+    rank: index < 3 ? index + 1 : 0 // 0 = ไม่ติดอันดับ
+  }));
+};
+
+// ฟังก์ชันดึงข้อมูลนักแสดงพร้อมอันดับสำหรับ ProfilePage
+export const getTopActors = () => {
+  return getActorsWithRanking(3).filter(actor => actor.rank > 0);
+};

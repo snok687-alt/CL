@@ -8,36 +8,49 @@ import { getVideosByCategory, searchVideos, getMoreVideosInCategory } from '../d
  * Skeleton component ສຳລັບສະແດງຂະນະທີ່ກຳລັງໂຫລດ
  * @param {boolean} isDarkMode - ໂໝດມືດ/ສະຫວ່າງ
  */
-const VideoCardSkeleton = ({ isDarkMode }) => (
-  <div
-    className={`rounded-md overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer transform hover:-translate-y-1 ${
-      isDarkMode ? 'bg-gray-800' : 'bg-white'
-    }`}
-  >
-    {/* ຮູບພາບ Skeleton */}
-    <div className="relative aspect-[6/5] bg-gray-600 animate-pulse"></div>
+const VideoCardSkeleton = ({ isDarkMode }) => {
+  return (
+    <div
+      className={`rounded-md overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 animate-fadeInUp ${
+        isDarkMode ? 'bg-gray-800' : 'bg-white'
+      }`}
+    >
+      {/* Thumbnail */}
+      <div className="relative aspect-[6/4] bg-gray-600 animate-pulse"></div>
 
-    {/* ເນື້ອຫາ Skeleton */}
-    <div className="px-2 py-1 space-y-1">
-      {/* ຫົວຂໍ້ */}
-      <div
-        className={`h-4 rounded ${isDarkMode ? 'bg-gray-700' : 'bg-gray-300'} w-5/6 animate-pulse`}
-      ></div>
-      {/* ຂໍ້ມູນເພີ່ມເຕີມ */}
-      <div className="flex items-center justify-around text-xs space-x-2">
+      {/* Metadata */}
+      <div className="px-2 py-1 space-y-1">
+        {/* Title */}
         <div
-          className={`h-3 w-10 rounded ${isDarkMode ? 'bg-gray-700' : 'bg-gray-300'} animate-pulse`}
+          className={`h-4 rounded-sm w-5/6 ${
+            isDarkMode ? 'bg-gray-700' : 'bg-gray-300'
+          } animate-pulse`}
         ></div>
-        <div
-          className={`h-3 w-1 rounded ${isDarkMode ? 'bg-gray-700' : 'bg-gray-300'} animate-pulse`}
-        ></div>
-        <div
-          className={`h-3 w-14 rounded ${isDarkMode ? 'bg-gray-700' : 'bg-gray-300'} animate-pulse`}
-        ></div>
+
+        {/* View + Upload Date Row */}
+        <div className="flex items-center justify-around text-xs">
+          {/* Views */}
+          <div
+            className={`h-3 w-10 rounded-full ${
+              isDarkMode ? 'bg-gray-700' : 'bg-gray-300'
+            } animate-pulse`}
+          ></div>
+
+          {/* Dot */}
+          <div className="w-1 h-1 rounded-full bg-gray-500"></div>
+
+          {/* Upload Date */}
+          <div
+            className={`h-3 w-12 rounded-full ${
+              isDarkMode ? 'bg-gray-700' : 'bg-gray-300'
+            } animate-pulse`}
+          ></div>
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
+
 
 /**
  * VideoGrid Component - ສະແດງ grid ຂອງວິດີໂອພ້ອມ infinite scroll
