@@ -37,7 +37,7 @@ const Navbar = ({ handleCategoryClick, categories, isDarkMode }) => {
 
   return (
     <>
-    <div className="relative w-full">
+    <div className="relative w-full -mt-2">
       {/* ປຸ່ມເລື່ອນຊ້າຍ */}
       {showLeftIcon && (
         <div className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-gradient-to-r from-white/80 dark:from-gray-800/80 px-1">

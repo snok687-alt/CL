@@ -63,15 +63,30 @@ const Dashboard = () => {
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
-      if (currentScrollY > lastScrollY.current && currentScrollY > 100) {
+      
+      // ຖ້າເປັນໜ້າວິດີໂອ ແລະ ໜ້າຈໍໃຫຍ່, ບໍ່ຕ້ອງຈັບການເລື່ອນ
+      if (isVideoPage && isLargeScreen) {
+        setIsHeaderVisible(true);
+        return;
+      }
+      
+      // ຖ້າເປັນໜ້າ profile, ບໍ່ຕ້ອງຈັບການເລື່ອນ
+      if (isProfilePage) {
+        return;
+      }
+      
+      // ຖ້າເລື່ອນລົງ (scroll down) ແລະ ເລື່ອນໄປແລ້ວຫຼາຍກວ່າ 50px
+      if (currentScrollY > lastScrollY.current && currentScrollY > 50) {
         setIsHeaderVisible(false);
-      } else if (currentScrollY < lastScrollY.current) {
+      } 
+      // ຖ້າເລື່ອນຂຶ້ນ (scroll up)
+      else if (currentScrollY < lastScrollY.current) {
         setIsHeaderVisible(true);
       }
+      
       lastScrollY.current = currentScrollY;
     };
 
-    // ໃຊ້ scroll listener ກັບທຸກໜ້າ
     window.addEventListener('scroll', handleScroll, { passive: true });
 
     return () => {
@@ -80,7 +95,7 @@ const Dashboard = () => {
         clearTimeout(searchTimeout.current);
       }
     };
-  }, [isVideoPage]);
+  }, [isVideoPage, isProfilePage, isLargeScreen]); // ເພີ່ມ dependencies
 
   useEffect(() => {
     const handleHeaderToggle = (e) => {

@@ -1,12 +1,12 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { getActorProfile, getActorGalleryImages, getActorsData } from '../data/actorData';
 import { getVideosByActor, getVideoById } from '../data/videoData';
 import Hls from 'hls.js';
+import FireIcon from '../hook/Fire_Icon'
 
 const ProfilePage = ({ isDarkMode = false, isTopActor = false }) => {
   const { profileName } = useParams();
-  const navigate = useNavigate();
   const videoRef = useRef(null);
   const hlsRef = useRef(null);
   const slideIntervalRef = useRef(null);
@@ -26,15 +26,31 @@ const ProfilePage = ({ isDarkMode = false, isTopActor = false }) => {
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [isSlidePaused, setIsSlidePaused] = useState(false);
   const [actorRank, setActorRank] = useState(0);
+  const [visibleImages, setVisibleImages] = useState([]); // ภาพที่แสดงอยู่
+  const [fadingIndex, setFadingIndex] = useState(null);   // index ของภาพที่กำลังหายไป
+
 
   // Constants
   const bg = 'bg-gray-100';
   const text = 'text-white';
   const textSec = 'text-white';
   const skeleton = 'bg-gray-300';
-  const btn = 'bg-blue-500 hover:bg-blue-600';
+  const btn = '';
   const actorRankColors = ['bg-red-600', 'bg-orange-500', 'bg-yellow-400'];
-  const rankColors = ['bg-gradient-to-r from-yellow-400 to-yellow-600', 'bg-gradient-to-r from-gray-400 to-gray-600', 'bg-gradient-to-r from-orange-400 to-orange-600'];
+  const rankColors = actorRankColors;
+
+  const formatViewCount = (views) => {
+    if (views >= 1_000_000_000) {
+      return (views / 1_000_000_000).toFixed(1).replace(/\.0$/, '') + 'B';
+    } else if (views >= 1_000_000) {
+      return (views / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
+    } else if (views >= 1_000) {
+      return (views / 1_000).toFixed(1).replace(/\.0$/, '') + 'K';
+    } else {
+      return views.toString();
+    }
+  };
+
 
   // Calculations
   const totalViews = videos.reduce((sum, video) => sum + (video.views || 0), 0);
@@ -77,7 +93,7 @@ const ProfilePage = ({ isDarkMode = false, isTopActor = false }) => {
     if (slideIntervalRef.current) clearInterval(slideIntervalRef.current);
     slideIntervalRef.current = setInterval(() => {
       setCurrentSlideIndex(prev => (prev + 1) % images.length);
-    }, 2000);
+    }, 5000);
   }, [images.length, showAllImages, isSlidePaused]);
 
   const stopSlideShow = useCallback(() => {
@@ -248,11 +264,29 @@ const ProfilePage = ({ isDarkMode = false, isTopActor = false }) => {
   }, [profileName, calculateActorRank]);
 
   useEffect(() => {
-    if (images.length > 4 && !showAllImages && !playingVideo && !isSlidePaused) {
-      startSlideShow();
-    }
-    return () => stopSlideShow();
-  }, [images.length, showAllImages, playingVideo, isSlidePaused, startSlideShow]);
+    if (images.length <= 4 || showAllImages || isSlidePaused) return;
+
+    let i = 0;
+    setVisibleImages(images.slice(i, i + 4));
+
+    slideIntervalRef.current = setInterval(() => {
+      setFadingIndex(0); // เริ่มลบภาพแรก
+
+      setTimeout(() => {
+        // ลบภาพแรก แล้วเพิ่มภาพใหม่เข้าไป
+        i = (i + 1) % images.length;
+        const nextImageIndex = (i + 3) % images.length;
+        setVisibleImages(prev => {
+          const updated = [...prev.slice(1), images[nextImageIndex]];
+          return updated;
+        });
+        setFadingIndex(null); // รีเซ็ต fade
+      }, 800); // รอให้ fade-out animation จบ (800ms)
+    }, 5000);
+
+    return () => clearInterval(slideIntervalRef.current);
+  }, [images, showAllImages, isSlidePaused]);
+
 
   useEffect(() => {
     setCurrentSlideIndex(0);
@@ -268,15 +302,58 @@ const ProfilePage = ({ isDarkMode = false, isTopActor = false }) => {
 
   if (loading) {
     return (
-      <div className={`max-w-screen-2xl mx-auto animate-pulse space-y-2 min-h-screen ${bg}`}>
-        <div className={`h-72 w-full ${skeleton}`} />
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2 px-2">
-          {Array(8).fill().map((_, i) => <div key={i} className={`h-48 rounded-lg ${skeleton}`} />)}
+      <div className={`relative max-w-screen-2xl mx-auto xl:px-2 min-h-screen animate-pulse ${bg}`}>
+        {/* Fake Background */}
+        <div className="fixed inset-0 w-full h-full overflow-hidden">
+          <div className="absolute inset-0 bg-gray-300 dark:bg-gray-800" />
+          <div className="absolute inset-0 bg-black/40" />
+        </div>
+
+        {/* Layout */}
+        <div className="relative z-10 flex flex-col xl:flex-row gap-4 py-6">
+          {/* Left: Profile Info Skeleton */}
+          <div className="w-full xl:w-1/3 space-y-6 px-4">
+            <div className="flex flex-row items-center gap-4">
+              <div className="w-52 md:w-64 h-auto aspect-[3/4] bg-gray-300 rounded-lg" />
+              <div className='space-y-3 text-left -mr-10'>
+                <div className="w-32 h-5 bg-gray-300 rounded" />
+                <div className="w-24 h-4 bg-gray-300 rounded" />
+                <div className="w-32 h-4 bg-gray-300 rounded" />
+                <div className="w-32 h-4 bg-gray-300 rounded" />
+                <div className="w-28 h-4 bg-gray-300 rounded" />
+                <div className="w-20 h-4 bg-gray-300 rounded" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div className="w-3/4 h-5 bg-gray-300 rounded" />
+              <div className="w-full h-16 bg-gray-300 rounded" />
+            </div>
+          </div>
+
+          {/* Right: Gallery + Videos Skeleton */}
+          <div className="w-full xl:w-2/3 space-y-6 px-4">
+            {/* Image Gallery */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              {Array(4).fill().map((_, i) => (
+                <div key={i} className="w-full aspect-[3/4] bg-gray-300 rounded-lg" />
+              ))}
+            </div>
+
+            {/* Videos Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {Array(6).fill().map((_, i) => (
+                <div key={i} className="space-y-2">
+                  <div className="w-full aspect-video bg-gray-300 rounded-lg" />
+                  <div className="w-3/4 h-4 bg-gray-300 rounded" />
+                  <div className="w-1/2 h-3 bg-gray-300 rounded" />
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     );
   }
-
   if (!profile) {
     return (
       <div className={`p-8 max-w-screen-2xl mx-auto text-center min-h-screen ${bg}`}>
@@ -296,7 +373,7 @@ const ProfilePage = ({ isDarkMode = false, isTopActor = false }) => {
     return displayed;
   };
 
-  const displayedImages = getDisplayedImages();
+  const displayedImages = showAllImages ? images : visibleImages;
   const sortedVideos = getSortedVideos();
 
   return (
@@ -331,12 +408,18 @@ const ProfilePage = ({ isDarkMode = false, isTopActor = false }) => {
                     <div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs shadow-lg">✓</div>
                   )}
                 </div>
-                <div className="space-y-4 text-left md:text-left">
+                <div className="space-y-4 text-left">
                   <h1 className={`text-xl font-bold ${text} drop-shadow-lg text-shadow-lg`}>{profile.name}</h1>
                   {profile.alternativeName && <p className={`text-base ${textSec} italic drop-shadow-md`}>{profile.alternativeName}</p>}
                   <p className={`text-base ${textSec} font-semibold drop-shadow-md bg-black/30 px-2 py-1 rounded-lg`}>
-                    总观看次数: {totalViews.toLocaleString()} 🔥
+                    总观看次数: {totalViews.toLocaleString()}
+                    {totalViews >= 1000 && (
+                      <div className="-mt-1 -mr-1 fire-icon-container">
+                        <FireIcon />
+                      </div>
+                    )}
                   </p>
+
                   {actorRank > 0 && (
                     <p className={`text-base font-semibold drop-shadow-md px-2 py-1 rounded-lg text-white ${actorRankColors[actorRank - 1]}`}>
                       🏆 热门演员排名 # {actorRank}
@@ -388,7 +471,10 @@ const ProfilePage = ({ isDarkMode = false, isTopActor = false }) => {
                   <h3 className={`font-bold text-lg ${text} mb-2`}>{playingVideo.title}</h3>
                   <div className="flex flex-wrap items-center text-sm text-gray-300 gap-2">
                     <span>{playingVideo.channelName}</span><span>•</span>
-                    {playingVideo.views > 0 && <><span>{playingVideo.views.toLocaleString()} 次观看</span><span>•</span></>}
+                    {playingVideo.views > 0 && <><span>
+                      {playingVideo.views.toLocaleString()} 次观看
+                    </span><span>•</span>
+                    </>}
                     <span>{playingVideo.uploadDate}</span>
                   </div>
                 </div>
@@ -404,11 +490,26 @@ const ProfilePage = ({ isDarkMode = false, isTopActor = false }) => {
                   <h2 className={`text-xl font-semibold text-left ${text} drop-shadow-lg`}>图片</h2>
                   {!showAllImages && images.length > 4 && (
                     <div className={`text-xs ${textSec} bg-black/30 px-2 py-1 rounded flex items-center gap-2`}>
-                      {isSlidePaused ? <><div className="w-2 h-2 bg-yellow-400 rounded-full"></div>已暂停</> : <><div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>自动轮播中... {currentSlideIndex + 1}-{Math.min(currentSlideIndex + 4, images.length)}/{images.length}</>}
+                      {isSlidePaused ? (
+                        <>
+                          <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
+                          已暂停
+                        </>
+                      ) : (
+                        <>
+                          <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                          自动轮播中... {(() => {
+                            const firstIndex = images.findIndex(img => img === visibleImages[0]) + 1;
+                            const lastIndex = firstIndex + visibleImages.length - 1;
+                            return `${firstIndex}-${lastIndex}/${images.length}`;
+                          })()}
+                        </>
+                      )}
+
                     </div>
                   )}
                 </div>
-                <div className="columns-2 md:columns-4 gap-2 space-y-2" onMouseEnter={pauseSlideShow} onMouseLeave={resumeSlideShow}>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2" onMouseEnter={pauseSlideShow} onMouseLeave={resumeSlideShow}>
                   {displayedImages.map((img, index) => {
                     const actualIndex = showAllImages ? index : (currentSlideIndex + index) % images.length;
                     return (
@@ -416,34 +517,35 @@ const ProfilePage = ({ isDarkMode = false, isTopActor = false }) => {
                         <img src={img} alt={`profile-img-${index}`} loading="lazy"
                           className="w-full rounded-lg object-cover cursor-pointer hover:opacity-80 transition-opacity"
                           onClick={() => openImage(actualIndex)} onMouseEnter={pauseSlideShow} />
-                        {!showAllImages && images.length > 4 && (
-                          <div className="absolute -bottom-8 md:right-26 md:left-26 letf-20 right-20 text-center bg-black/60 text-white text-xs p-1 rounded-full">
-                            {actualIndex + 1}
-                          </div>
-                        )}
                       </div>
                     );
                   })}
                 </div>
                 {images.length > 4 && (
                   <div className="mt-4 text-center">
-                    <button className={`px-4 py-2 rounded-md text-white transition-colors shadow-lg ${btn}`} onClick={handleShowAllImages}>
-                      {showAllImages ? `收起 (显示 4 张)` : `更多图片（${images.length} 张）`}
+                    <button
+                      className={`px-4 py-2 rounded-md text-white transition-colors shadow-lg ${btn} border-b`}
+                      onClick={handleShowAllImages}
+                    >
+                      {showAllImages
+                        ? `收起 (显示 4 张) ↑`
+                        : `更多图片（${images.length} 张） ↓`}
                     </button>
                   </div>
                 )}
+
               </div>
             )}
 
             <div className={`px-2 rounded-lg`}>
               <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4">
                 <h2 className={`text-2xl font-bold text-left ${text} drop-shadow-lg mb-2 sm:mb-0`}>视频</h2>
-                <div className="flex items-center space-x-2">
+                <div className="flex justify-between items-center space-x-2">
                   <span className={`text-sm ${textSec} drop-shadow`}>排序方式:</span>
                   <div className="flex bg-black/30 backdrop-blur rounded-lg p-1">
                     {['views', 'date', 'title'].map((type) => (
                       <button key={type} onClick={() => handleSortChange(type)}
-                        className={`px-3 py-1 text-xs rounded-md transition-colors ${sortBy === type ? 'bg-blue-500 text-white' : 'text-gray-300 hover:text-white'
+                        className={`px-3 py-1 text-xs rounded-md transition-colors ${sortBy === type ? 'bg-blue-500 text-white' : 'text-gray-300 hover:text-white border-b'
                           }`}>
                         {type === 'views' ? '观看次数' : type === 'date' ? '日期' : '标题'} {sortBy === type && (sortOrder === 'desc' ? '↓' : '↑')}
                       </button>
@@ -481,7 +583,17 @@ const ProfilePage = ({ isDarkMode = false, isTopActor = false }) => {
                         <div className="p-3">
                           <h3 className={`font-semibold text-sm line-clamp-2 mb-1 ${text} transition-colors drop-shadow-md`}>{video.title}</h3>
                           <div className="flex items-center justify-between">
-                            <p className={`text-xs ${textSec} drop-shadow`}>{video.views.toLocaleString()} 次观看</p>
+                            <div className='flex flex-row items-center gap-1'>
+                              {video.views >= 1000 && (
+                                <div className="-mt-1 -mr-1 fire-icon-container">
+                                  <FireIcon />
+                                </div>
+                              )}
+                              <p className={`text-xs ${textSec} drop-shadow`}>
+                                {formatViewCount(video.views)} 次观看
+                              </p>
+                            </div>
+
                             {video.uploadDate && <p className={`text-xs ${textSec} drop-shadow`}>{video.uploadDate}</p>}
                           </div>
                         </div>

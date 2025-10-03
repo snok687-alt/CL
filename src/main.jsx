@@ -5,6 +5,7 @@ import './style/button.css'
 import './style/profile_rank.css'
 import './style/profile.css'
 import './style/fire_videocard.css'
+import './style/image_in_profilepage.css'
 import App from './App'
 
 createRoot(document.getElementById('root')).render(

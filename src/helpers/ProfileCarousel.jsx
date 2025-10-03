@@ -102,7 +102,7 @@ const ProfileCarousel = ({ isDarkMode = false }) => {
               setActiveExpanded(null);
               scrollRef.current.scrollLeft -= scrollByAmount;
             }}
-            className={`absolute left-0 top-1/2 -translate-y-1/2 z-20 ${buttonBgClass} border rounded-full p-2 shadow-lg`}
+            className={`absolute left-0 top-1/2 -translate-y-1/2 z-20`}
             aria-label="เลื่อนซ้าย"
           >
             <ChevronLeft className={`w-5 h-5 ${buttonTextClass}`} />
@@ -133,7 +133,7 @@ const ProfileCarousel = ({ isDarkMode = false }) => {
               setActiveExpanded(null);
               scrollRef.current.scrollLeft += scrollByAmount;
             }}
-            className={`absolute right-0 top-1/2 -translate-y-1/2 z-10 ${buttonBgClass} border rounded-full p-2 shadow-lg`}
+            className={`absolute right-0 top-1/2 -translate-y-1/2 z-10`}
             aria-label="เลื่อนขวา"
           >
             <ChevronRight className={`w-5 h-5 ${buttonTextClass}`} />

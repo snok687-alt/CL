@@ -37,7 +37,7 @@ const Header = ({ searchTerm, onSearchChange, isDarkMode, toggleTheme, isVisible
 
   return (
     <header 
-      className={`sticky top-0 z-50 transition-transform duration-300 shadow-md px-1 py-2 w-full ${
+      className={`sticky top-0 z-50 transition-transform duration-150 shadow-md px-1 py-2 w-full ${
         isVisible ? 'translate-y-0' : '-translate-y-full'
       } ${isDarkMode ? 'bg-gray-800 shadow-gray-900/20' : 'bg-white shadow-gray-200/50'}`}
     >

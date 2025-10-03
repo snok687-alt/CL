@@ -1,80 +1,100 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-// เพิ่ม prop "rank"
 const ProfileCard = ({ profile, isDarkMode = false, rank = 0 }) => {
   const navigate = useNavigate();
   const [isHovered, setIsHovered] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [expandedStyle, setExpandedStyle] = useState({});
+  const [tapCount, setTapCount] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
+  const tapTimeoutRef = useRef(null);
   const cardRef = useRef(null);
   const expandedRef = useRef(null);
 
-  const handleClick = () => {
-    navigate(`/profile/${encodeURIComponent(profile.name)}`);
-  };
+  // ตรวจว่าหน้าจอเป็นมือถือหรือไม่
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
 
-  // อัพเดทตำแหน่งการแสดงภาพขยาย
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // คำนวณตำแหน่งรูปขยาย
   useEffect(() => {
     if (!isHovered || !cardRef.current) return;
 
     const updateExpandedPosition = () => {
       const cardRect = cardRef.current.getBoundingClientRect();
       const scrollY = window.scrollY;
-
-      // คำนวณตำแหน่งให้แสดงด้านล่างของโปรไฟล์
       const top = cardRect.bottom + scrollY + 10;
-      const left = cardRect.left + (cardRect.width / 2);
-
-      // ตรวจสอบและปรับตำแหน่งให้ไม่ถูกตัดที่ขอบหน้าจอ
-      const expandedWidth = 192; // w-48 = 192px
+      const left = cardRect.left + cardRect.width / 2;
+      const expandedWidth = 192;
       const viewportWidth = window.innerWidth;
       const expandedHalfWidth = expandedWidth / 2;
-
       let adjustedLeft = left;
 
-      // ตรวจสอบขอบซ้าย (เหลือที่ว่างน้อยกว่า 10px)
       if (left - expandedHalfWidth < 10) {
         adjustedLeft = expandedHalfWidth + 10;
-      }
-      // ตรวจสอบขอบขวา (เหลือที่ว่างน้อยกว่า 10px)
-      else if (left + expandedHalfWidth > viewportWidth - 10) {
+      } else if (left + expandedHalfWidth > viewportWidth - 10) {
         adjustedLeft = viewportWidth - expandedHalfWidth - 10;
       }
 
       setExpandedStyle({
         top: `${top}px`,
         left: `${adjustedLeft}px`,
-        transform: 'translateX(-50%)'
+        transform: 'translateX(-50%)',
       });
     };
 
     updateExpandedPosition();
     window.addEventListener('resize', updateExpandedPosition);
     window.addEventListener('scroll', updateExpandedPosition);
-
     return () => {
       window.removeEventListener('resize', updateExpandedPosition);
       window.removeEventListener('scroll', updateExpandedPosition);
     };
   }, [isHovered]);
 
-  // เพิ่ม useEffect เพื่อปิดภาพขยายเมื่อ scroll
+  // ปิดภาพขยายเมื่อ scroll
   useEffect(() => {
     const handleScroll = () => {
       setIsHovered(false);
+      setTapCount(0);
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Dynamic classes based on theme
+  // จัดการคลิกบนมือถือ/เดสก์ท็อป
+  const handleCardClick = () => {
+    if (isMobile) {
+      if (tapCount === 0) {
+        setIsHovered(true);
+        setTapCount(1);
+        tapTimeoutRef.current = setTimeout(() => {
+          setTapCount(0);
+          setIsHovered(false);
+        }, 3000);
+      } else {
+        clearTimeout(tapTimeoutRef.current);
+        setTapCount(0);
+        setIsHovered(false);
+        navigate(`/profile/${encodeURIComponent(profile.name)}`);
+      }
+    } else {
+      navigate(`/profile/${encodeURIComponent(profile.name)}`);
+    }
+  };
+
   const hoverBgClass = isDarkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-50';
   const borderClass = isDarkMode ? 'border-gray-600 hover:border-blue-400' : 'border-gray-200 hover:border-blue-400';
   const textClass = isDarkMode ? 'text-gray-200 hover:text-blue-400' : 'text-gray-800 hover:text-blue-600';
 
-  // กำหนดสีตามอันดับ
   const rankColors = {
     1: {
       primary: 'yellow',
@@ -105,50 +125,40 @@ const ProfileCard = ({ profile, isDarkMode = false, rank = 0 }) => {
     }
   };
 
-  // คลาสพิเศษสำหรับอันดับ 1-3
   const isTopThree = rank > 0 && rank <= 3;
   const rankStyle = rankColors[rank];
 
   return (
     <div
       ref={cardRef}
-      onClick={handleClick}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      onTouchStart={() => setIsHovered(true)}
-      onTouchEnd={() => setIsHovered(false)}
+      onClick={handleCardClick}
+      onMouseEnter={() => !isMobile && setIsHovered(true)}
+      onMouseLeave={() => !isMobile && setIsHovered(false)}
       className={`profile-card cursor-pointer hover:shadow-lg transition-all duration-300 text-center rounded-lg ${hoverBgClass} relative pt-2 ${isTopThree ? 'relative overflow-visible' : ''}`}
     >
       <div className="relative group">
-        {/* เพิ่มป้าย HOT สำหรับอันดับ 1-3 */}
+        {/* ป้าย HOT อันดับ 1-3 */}
         {isTopThree && (
           <div className="absolute -top-3 left-0 z-10 p-0 flex justify-center">
-            <div
-              className={`
-                w-5 h-5 flex items-center justify-center rounded-full text-md font-bold text-white 
-                shadow-lg dark:border-gray-800
-                transform transition-all duration-700 ease-in-out
-                group-hover:scale-125 group-hover:-translate-y-1
-                hover:shadow-xl hover:ring-2 hover:ring-white/50
-                animate-bounce-gentle
-                ${rank === 1 ? ' animate-pulse-gold' : 
-                  rank === 2 ? 'animate-pulse-silver' : 
-                  'animate-pulse-bronze'}
-              `}
-            >
+            <div className={`
+              w-5 h-5 flex items-center justify-center rounded-full text-md font-bold text-white 
+              shadow-lg dark:border-gray-800
+              transform transition-all duration-700 ease-in-out
+              group-hover:scale-125 group-hover:-translate-y-1
+              hover:shadow-xl hover:ring-2 hover:ring-white/50
+              animate-bounce-gentle
+              ${rank === 1 ? 'animate-pulse-gold' : rank === 2 ? 'animate-pulse-silver' : 'animate-pulse-bronze'}
+            `}>
               {rank === 1 ? '👑' : rank === 2 ? '🥈' : '🥉'}
             </div>
           </div>
         )}
 
-        {/* Animation Border สำหรับอันดับ 1-3 */}
+        {/* Border Animations */}
         {isTopThree && (
           <>
-            {/* Border Animation 1 - Glow Effect */}
             <div className={`absolute inset-0 rounded-full opacity-75 ${
-              rank === 1 ? 'animate-ping-gold' : 
-              rank === 2 ? 'animate-ping-silver' : 
-              'animate-ping-bronze'
+              rank === 1 ? 'animate-ping-gold' : rank === 2 ? 'animate-ping-silver' : 'animate-ping-bronze'
             }`}>
               <div className={`w-full h-full rounded-full blur-sm ${
                 rank === 1 ? 'bg-gradient-to-r from-yellow-400 to-orange-500' :
@@ -156,8 +166,6 @@ const ProfileCard = ({ profile, isDarkMode = false, rank = 0 }) => {
                 'bg-gradient-to-r from-orange-400 to-amber-500'
               }`}></div>
             </div>
-            
-            {/* Border Animation 2 - Rotating Gradient */}
             <div className="absolute inset-[-2px] rounded-full animate-rotate-border opacity-90">
               <div className={`w-full h-full rounded-full ${
                 rank === 1 ? 'bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500' :
@@ -165,8 +173,6 @@ const ProfileCard = ({ profile, isDarkMode = false, rank = 0 }) => {
                 'bg-gradient-to-r from-orange-400 via-amber-500 to-yellow-500'
               }`}></div>
             </div>
-            
-            {/* Border Animation 3 - Pulsing Ring */}
             <div className={`absolute inset-[-1px] rounded-full ${
               rank === 1 ? 'animate-pulse-ring-gold' :
               rank === 2 ? 'animate-pulse-ring-silver' :
@@ -181,6 +187,7 @@ const ProfileCard = ({ profile, isDarkMode = false, rank = 0 }) => {
           </>
         )}
 
+        {/* รูปภาพโปรไฟล์ */}
         <img
           src={profile.image}
           alt={profile.name}
@@ -190,13 +197,11 @@ const ProfileCard = ({ profile, isDarkMode = false, rank = 0 }) => {
             setImageLoaded(true);
           }}
           className={`profile-image w-16 h-16 md:w-18 md:h-18 rounded-full object-cover object-top mx-auto border-2 transition-all duration-300 ${
-            isTopThree 
-              ? `${rankStyle.border} ${rankStyle.shadow} shadow-lg relative z-10` 
-              : borderClass
+            isTopThree ? `${rankStyle.border} ${rankStyle.shadow} shadow-lg relative z-10` : borderClass
           } ${isHovered ? 'scale-90 opacity-80' : 'group-hover:scale-105'}`}
         />
 
-        {/* Sparkle Effects สำหรับอันดับ 1-3 */}
+        {/* Sparkles */}
         {isTopThree && (
           <>
             <div className={`absolute top-0 right-1 w-2 h-2 rounded-full opacity-0 ${
@@ -217,21 +222,20 @@ const ProfileCard = ({ profile, isDarkMode = false, rank = 0 }) => {
           </>
         )}
 
-        {/* Expanded Image - แสดงด้านล่าง */}
+        {/* ภาพขยาย */}
         {isHovered && imageLoaded && (
           <div
             ref={expandedRef}
-            className="expanded-image-container fixed z-50 pointer-events-none"
+            className="expanded-image-container fixed z-50 cursor-pointer"
             style={expandedStyle}
           >
             <div className="expanded-image-wrapper bg-white dark:bg-gray-800 rounded-lg shadow-2xl relative overflow-hidden">
-              {/* แสดงอันดับในรูปขยายด้วย - ปรับตำแหน่งและสไตล์ใหม่ */}
               {isTopThree && (
                 <div className="absolute top-2 left-[-24px] z-20 transform -rotate-45">
                   <div className={`w-22 text-center py-1 text-xs font-bold text-white ${
-                    rank === 1 ? 'bg-yellow-500' :
-                    rank === 2 ? 'bg-gray-500' :
-                    'bg-orange-500'
+                    rank === 1 ? 'bg-red-500' :
+                    rank === 2 ? 'bg-orange-500' :
+                    'bg-yellow-500'
                   } shadow-md drop-shadow-md`}>
                     👑 HOT {rank}
                   </div>
@@ -241,10 +245,9 @@ const ProfileCard = ({ profile, isDarkMode = false, rank = 0 }) => {
               <img
                 src={profile.image}
                 alt={profile.name}
-                className="expanded-image w-40 h-48 md:w-48 md:h-64 object-cover"
+                className="expanded-image w-40 h-48 md:w-48 md:h-64 object-cover pointer-events-none"
               />
 
-              {/* แสดงข้อมูลเพิ่มเติมในรูปขยาย */}
               <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/70 to-transparent p-3 text-white">
                 <h3 className="font-bold text-sm truncate">{profile.name}</h3>
                 <p className="text-xs truncate">{profile.videoCount} 部作品</p>
