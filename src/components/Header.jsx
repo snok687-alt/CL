@@ -6,7 +6,7 @@ import Navbar from './Navbar';
 import SearchBox from './SearchBox';
 import ProfileCarousel from '../helpers/ProfileCarousel';
 
-const Header = ({ searchTerm, onSearchChange, isDarkMode, toggleTheme, isVisible }) => {
+const Header = ({ searchTerm, onSearchChange, isDarkMode, toggleTheme, isVisible, currentCategory }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -63,6 +63,7 @@ const Header = ({ searchTerm, onSearchChange, isDarkMode, toggleTheme, isVisible
             searchTerm={searchTerm}
             onSearchChange={onSearchChange}
             isDarkMode={isDarkMode}
+            currentCategory={currentCategory}
           />
           
           <button
@@ -72,7 +73,7 @@ const Header = ({ searchTerm, onSearchChange, isDarkMode, toggleTheme, isVisible
                 ? 'bg-gray-700 text-yellow-300 hover:bg-gray-600 hover:scale-110' 
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300 hover:scale-110'
             }`}
-            aria-label="ປ່ຽນໂໝດສີ"
+            aria-label="เปลี่ยนโหมดสี"
           >
             {isDarkMode ? (
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -91,7 +92,6 @@ const Header = ({ searchTerm, onSearchChange, isDarkMode, toggleTheme, isVisible
           isDarkMode={isDarkMode}
         />
       </div>
-      {/* ສົ່ງ isDarkMode prop ໄປຫາ ProfileCarousel */}
       <ProfileCarousel isDarkMode={isDarkMode} />
     </header>
   );

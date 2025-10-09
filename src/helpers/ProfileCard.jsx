@@ -24,40 +24,37 @@ const ProfileCard = ({ profile, isDarkMode = false, rank = 0 }) => {
   }, []);
 
   // คำนวณตำแหน่งรูปขยาย
-  useEffect(() => {
-    if (!isHovered || !cardRef.current) return;
+useEffect(() => {
+  if (!isHovered || !cardRef.current) return;
 
-    const updateExpandedPosition = () => {
-      const cardRect = cardRef.current.getBoundingClientRect();
-      const scrollY = window.scrollY;
-      const top = cardRect.bottom + scrollY + 10;
-      const left = cardRect.left + cardRect.width / 2;
-      const expandedWidth = 192;
-      const viewportWidth = window.innerWidth;
-      const expandedHalfWidth = expandedWidth / 2;
-      let adjustedLeft = left;
+  const updateExpandedPosition = () => {
+    const cardRect = cardRef.current.getBoundingClientRect();
+    const top = cardRect.bottom + 10; // ไม่ใช้ scrollY
+    const left = cardRect.left + cardRect.width / 2;
 
-      if (left - expandedHalfWidth < 10) {
-        adjustedLeft = expandedHalfWidth + 10;
-      } else if (left + expandedHalfWidth > viewportWidth - 10) {
-        adjustedLeft = viewportWidth - expandedHalfWidth - 10;
-      }
+    const expandedWidth = 192;
+    const viewportWidth = window.innerWidth;
+    const expandedHalfWidth = expandedWidth / 2;
+    let adjustedLeft = left;
 
-      setExpandedStyle({
-        top: `${top}px`,
-        left: `${adjustedLeft}px`,
-        transform: 'translateX(-50%)',
-      });
-    };
+    if (left - expandedHalfWidth < 10) {
+      adjustedLeft = expandedHalfWidth + 10;
+    } else if (left + expandedHalfWidth > viewportWidth - 10) {
+      adjustedLeft = viewportWidth - expandedHalfWidth - 10;
+    }
 
-    updateExpandedPosition();
-    window.addEventListener('resize', updateExpandedPosition);
-    window.addEventListener('scroll', updateExpandedPosition);
-    return () => {
-      window.removeEventListener('resize', updateExpandedPosition);
-      window.removeEventListener('scroll', updateExpandedPosition);
-    };
-  }, [isHovered]);
+    setExpandedStyle({
+      top: `${top}px`,
+      left: `${adjustedLeft}px`,
+      transform: 'translateX(-50%)',
+    });
+  };
+
+  updateExpandedPosition();
+  window.addEventListener('resize', updateExpandedPosition);
+  return () => window.removeEventListener('resize', updateExpandedPosition);
+}, [isHovered]);
+
 
   // ปิดภาพขยายเมื่อ scroll
   useEffect(() => {
@@ -139,7 +136,7 @@ const ProfileCard = ({ profile, isDarkMode = false, rank = 0 }) => {
       <div className="relative group">
         {/* ป้าย HOT อันดับ 1-3 */}
         {isTopThree && (
-          <div className="absolute -top-3 left-0 z-10 p-0 flex justify-center">
+          <div className="absolute -top-3 left-0 z-10 p-0 flex justify-center" >
             <div className={`
               w-5 h-5 flex items-center justify-center rounded-full text-md font-bold text-white 
               shadow-lg dark:border-gray-800

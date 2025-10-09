@@ -2,7 +2,7 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
-const SearchBox = ({ searchTerm, onSearchChange, isDarkMode }) => {
+const SearchBox = ({ searchTerm, onSearchChange, isDarkMode, currentCategory }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -13,17 +13,21 @@ const SearchBox = ({ searchTerm, onSearchChange, isDarkMode }) => {
   const clearSearch = () => {
     onSearchChange('');
 
-    // ກວດສອບວ່າຢູ່ໃນໝວດໝູ່ໃດຫຼືບໍ່
     const isCategoryPage = location.pathname.startsWith('/category/');
+    const isSearchPage = location.pathname === '/search';
 
     if (isCategoryPage) {
-      // ຢູ່ໜ້າໝວດໝູ່ແລ້ວ ບໍ່ຕ້ອງເຮັດຫຍັງ
+      // อยู่ในหมวดหมู่แล้ว ไม่ต้องทำอะไร
       return;
-    } else if (location.pathname === '/search') {
-      // ຢູ່ໜ້າຄົ້ນຫາ ໃຫ້ກັບຄືນໄປໜ້າເດີມ
-      navigate(-1);
+    } else if (isSearchPage) {
+      // กลับไปยังหมวดหมู่เดิมหรือหน้าหลัก
+      if (currentCategory) {
+        navigate(`/category/${currentCategory}`);
+      } else {
+        navigate('/');
+      }
     } else {
-      // ກໍລະນີອື່ນໆ ກັບຄືນໄປໜ້າແຮກ
+      // กรณีอื่นๆ กลับไปหน้าหลัก
       navigate('/');
     }
   };
@@ -36,10 +40,11 @@ const SearchBox = ({ searchTerm, onSearchChange, isDarkMode }) => {
           value={searchTerm}
           onChange={handleInputChange}
           placeholder="搜索视频"
-          className={`w-full py-1 pl-10 pr-10 rounded-full border focus:outline-none focus:ring-2 focus:ring-red-500 ${isDarkMode
+          className={`w-full py-1 pl-10 pr-10 rounded-full border focus:outline-none focus:ring-2 focus:ring-red-500 ${
+            isDarkMode
               ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
               : 'bg-white border-gray-300 text-black placeholder-gray-500'
-            }`}
+          }`}
         />
         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
           <svg
@@ -63,8 +68,9 @@ const SearchBox = ({ searchTerm, onSearchChange, isDarkMode }) => {
             className="absolute text-xs inset-y-0 right-0 pr-3 flex items-center"
           >
             <svg
-              className={`w-5 h-5 ${isDarkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-black'
-                }`}
+              className={`w-5 h-5 ${
+                isDarkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-black'
+              }`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"

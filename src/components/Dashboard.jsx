@@ -8,6 +8,7 @@ const Dashboard = () => {
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   const [isLargeScreen, setIsLargeScreen] = useState(window.innerWidth >= 1024);
+  const [currentCategory, setCurrentCategory] = useState(null); // เก็บหมวดหมู่ปัจจุบัน
   const lastScrollY = useRef(0);
   const location = useLocation();
   const navigate = useNavigate();
@@ -15,7 +16,22 @@ const Dashboard = () => {
 
   const isVideoPage = location.pathname.startsWith('/watch');
   const isSearchPage = location.pathname === '/search';
-  const isProfilePage = location.pathname.startsWith('/profile'); // ກວດສອບໜ້າໂປຣໄຟລ໌
+  const isProfilePage = location.pathname.startsWith('/profile');
+  const isCategoryPage = location.pathname.startsWith('/category/');
+
+  // อัพเดทหมวดหมู่ปัจจุบันเมื่อเปลี่ยนหน้า
+  useEffect(() => {
+    if (isCategoryPage) {
+      const categoryId = location.pathname.split('/').pop();
+      setCurrentCategory(categoryId);
+    } else if (isSearchPage) {
+      // เก็บหมวดหมู่จาก state ถ้ามี
+      const fromCategory = location.state?.fromCategory;
+      if (fromCategory) {
+        setCurrentCategory(fromCategory);
+      }
+    }
+  }, [location, isCategoryPage, isSearchPage]);
 
   const handleSearchChange = (term) => {
     setSearchTerm(term);
@@ -26,27 +42,40 @@ const Dashboard = () => {
 
     searchTimeout.current = setTimeout(() => {
       if (term.trim() !== '') {
+        // ส่งข้อมูลหมวดหมู่ปัจจุบันไปกับ navigation
+        const navigateState = { 
+          searchTerm: term,
+          fromCategory: currentCategory || (isCategoryPage ? location.pathname.split('/').pop() : null)
+        };
+
         if (isSearchPage) {
-          window.dispatchEvent(new CustomEvent('searchUpdated', { detail: term }));
+          window.dispatchEvent(new CustomEvent('searchUpdated', { 
+            detail: { 
+              searchTerm: term,
+              fromCategory: currentCategory
+            } 
+          }));
         } else {
-          navigate('/search', { state: { searchTerm: term } });
+          navigate('/search', { state: navigateState });
         }
       } else {
-        // ເມື່ອຄົ້ນຫາແບບຄຳວ່າງ
+        // เมื่อค้นหาแบบคำว่าง
         if (isSearchPage) {
-          window.dispatchEvent(new CustomEvent('searchUpdated', { detail: '' }));
+          window.dispatchEvent(new CustomEvent('searchUpdated', { 
+            detail: { 
+              searchTerm: '',
+              fromCategory: currentCategory
+            } 
+          }));
           
-          // ກວດສອບວ່າມາຈາກໝວດໝູ່ໃດຫຼືບໍ່
-          const cameFromCategory = location.state?.fromCategory;
-          if (cameFromCategory) {
-            // ກັບຄືນໄປໝວດໝູ່ເດີມ
-            navigate(cameFromCategory);
+          // กลับไปยังหมวดหมู่เดิม
+          if (currentCategory) {
+            navigate(`/category/${currentCategory}`);
           } else {
-            // ກັບຄືນໄປໜ້າຫຼັກ
+            // กลับไปหน้าหลัก
             navigate('/');
           }
         }
-        // ຫາກຢູ່ໜ້າໝວດໝູ່ແລ້ວ ບໍ່ຕ້ອງເຮັດຫຍັງ
       }
     }, 500);
   };
@@ -64,22 +93,18 @@ const Dashboard = () => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
       
-      // ຖ້າເປັນໜ້າວິດີໂອ ແລະ ໜ້າຈໍໃຫຍ່, ບໍ່ຕ້ອງຈັບການເລື່ອນ
       if (isVideoPage && isLargeScreen) {
         setIsHeaderVisible(true);
         return;
       }
       
-      // ຖ້າເປັນໜ້າ profile, ບໍ່ຕ້ອງຈັບການເລື່ອນ
       if (isProfilePage) {
         return;
       }
       
-      // ຖ້າເລື່ອນລົງ (scroll down) ແລະ ເລື່ອນໄປແລ້ວຫຼາຍກວ່າ 50px
       if (currentScrollY > lastScrollY.current && currentScrollY > 50) {
         setIsHeaderVisible(false);
       } 
-      // ຖ້າເລື່ອນຂຶ້ນ (scroll up)
       else if (currentScrollY < lastScrollY.current) {
         setIsHeaderVisible(true);
       }
@@ -95,7 +120,7 @@ const Dashboard = () => {
         clearTimeout(searchTimeout.current);
       }
     };
-  }, [isVideoPage, isProfilePage, isLargeScreen]); // ເພີ່ມ dependencies
+  }, [isVideoPage, isProfilePage, isLargeScreen]);
 
   useEffect(() => {
     const handleHeaderToggle = (e) => {
@@ -116,7 +141,6 @@ const Dashboard = () => {
         isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-black'
       }`}
     >
-      {/* ສະແດງ Header ເມື່ອບໍ່ແມ່ນໜ້າ profile ຫຼື video page (ຍົກເວັ້ນ large screen) */}
       {!isProfilePage && (!isVideoPage || (isVideoPage && isLargeScreen)) && (
         <Header
           searchTerm={searchTerm}
@@ -124,12 +148,17 @@ const Dashboard = () => {
           isDarkMode={isDarkMode}
           toggleTheme={toggleTheme}
           isVisible={isHeaderVisible}
+          currentCategory={currentCategory}
         />
       )}
 
       <main className={`flex-grow ${isVideoPage ? 'pt-0' : ''}`}>
-        {/* ສົ່ງ isDarkMode ໄປຫາ child components ຜ່ານ context */}
-        <Outlet context={{ searchTerm, isDarkMode, setSearchTerm }} />
+        <Outlet context={{ 
+          searchTerm, 
+          isDarkMode, 
+          setSearchTerm,
+          currentCategory 
+        }} />
       </main>
     </div>
   );

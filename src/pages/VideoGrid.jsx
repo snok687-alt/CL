@@ -179,9 +179,9 @@ const VideoGrid = ({ title, filter }) => {
   // ສະແດງໜ້າ loading ດ້ວຍ skeleton cards
   if (loading) {
     return (
-      <div className={`min-h-screen p-1 md:p-4 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-100'}`}>
+      <div className={`min-h-screen p-1 md:p-2 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-100'}`}>
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-3 xs:grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-6 gap-2 md:gap-4">
+          <div className="grid grid-cols-3 xs:grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-6 gap-2 md:gap-2">
             {/* ສະແດງ 18 skeleton cards */}
             {Array.from({ length: VIDEOS_PER_PAGE }).map((_, index) => (
               <VideoCardSkeleton key={index} isDarkMode={isDarkMode} />
@@ -244,7 +244,7 @@ const VideoGrid = ({ title, filter }) => {
             {/* ຂໍ້ຄວາມສິ້ນສຸດ */}
             {!hasMore && videos.length > 0 && (
               <div className={`text-center py-8 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                <p>ໂຫລດວິດີໂອຄົບທັງໝົດແລ້ວ ({videos.length} ວິດີໂອ)</p>
+                <p>所有视频已加载完成（{videos.length} 个视频）</p>
               </div>
             )}
           </>
@@ -254,4 +254,4 @@ const VideoGrid = ({ title, filter }) => {
   );
 };
 
-export default VideoGrid;
+export default VideoGrid; 

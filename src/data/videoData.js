@@ -25,7 +25,7 @@ const retry = async (fn, maxRetries = 2) => {
 
 // Cache ง่ายๆ เพื่อเก็บข้อมูลไว้ชั่วคราว
 const cache = new Map();
-const CACHE_TTL = 5 * 60 * 1000; // 5 นาที
+const CACHE_TTL = 10 * 60 * 1000; // 10 นาที
 
 // ดึงข้อมูลจาก cache
 const getFromCache = (key) => {
@@ -130,16 +130,33 @@ const formatVideo = (item, serverViews = {}) => {
 const getVideosWithDetails = async (ids) => {
   if (!ids.length) return [];
 
-  try {
-    const response = await retry(() =>
-      axios.get(`/api/?ac=detail&ids=${ids.join(',')}`)
+  const BATCH_SIZE = 20;
+  const batches = [];
+
+  for (let i = 0; i < ids.length; i += BATCH_SIZE) {
+    const batchIds = ids.slice(i, i + BATCH_SIZE);
+    batches.push(
+      retry(() => axios.get(`/api/?ac=detail&ids=${batchIds.join(',')}`))
     );
-    return (response.data?.list || response.data?.data || []).map(formatVideo);
+  }
+
+  try {
+    const results = await Promise.all(batches);
+    
+    const allItems = results.flatMap(res =>
+      res.data?.list || res.data?.data || []
+    );
+
+    // ใช้ map เพื่อความเร็ว
+    const serverViews = {}; // ยังไม่มีในฟังก์ชันนี้ (โหลดจาก fetchViewsFromServer ภายนอก)
+    return allItems.map(item => formatVideo(item, serverViews));
+
   } catch (error) {
-    console.error('เกิดข้อผิดพาดในการดึงรายละเอียดวิดีโอ:', error);
+    console.error('เกิดข้อผิดพลาดในการโหลดรายละเอียดวิดีโอ:', error);
     return [];
   }
 };
+
 
 // ========== ฟังชันหลักสำหรับวิดีโอ ==========
 
@@ -157,32 +174,32 @@ export const fetchVideosFromAPI = async (type_id = '', searchQuery = '', limit =
 
     const response = await apiCall(params.toString());
     const videoList = response.data?.list || response.data?.data || [];
-
     if (!videoList.length) return [];
 
     const ids = videoList.map(item => item.vod_id || item.id).filter(Boolean);
-    
-    // ดึงยอดวิวจากเซิร์บเวอร์
-    const serverViews = await fetchViewsFromServer(ids);
-    
-    const allVideos = await getVideosWithDetails(ids);
-    
-    // รวมยอดวิวจากเซิร์บเวอร์
-    const videosWithServerViews = allVideos.map(video => ({
+
+    // ✅ โหลดพร้อมกัน (เร็วขึ้น)
+    const [serverViews, detailedVideos] = await Promise.all([
+      fetchViewsFromServer(ids),
+      getVideosWithDetails(ids) // ใช้เวอร์ชันใหม่ข้างล่าง
+    ]);
+
+    // ✅ รวมยอดวิวจาก server
+    const videosWithServerViews = detailedVideos.map(video => ({
       ...video,
       views: serverViews[video.id] || video.views
     }));
 
-    // จำกัดจำนวนวิดีโอที่ส่งกลับ
     const videos = videosWithServerViews.slice(0, limit);
-
     setToCache(cacheKey, videos);
     return videos;
+
   } catch (error) {
-    console.error('เกิดข้อผิดพาดในการดึงวิดีโอ:', error);
+    console.error('เกิดข้อผิดพลาดในการดึงวิดีโอ:', error);
     return [];
   }
 };
+
 
 // ดึงวิดีโอตาม ID
 export const getVideoById = async (id) => {

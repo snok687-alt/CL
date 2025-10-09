@@ -411,14 +411,14 @@ const ProfilePage = ({ isDarkMode = false, isTopActor = false }) => {
                 <div className="space-y-4 text-left">
                   <h1 className={`text-xl font-bold ${text} drop-shadow-lg text-shadow-lg`}>{profile.name}</h1>
                   {profile.alternativeName && <p className={`text-base ${textSec} italic drop-shadow-md`}>{profile.alternativeName}</p>}
-                  <p className={`text-base ${textSec} font-semibold drop-shadow-md bg-black/30 px-2 py-1 rounded-lg`}>
+                  <div className={`text-base ${textSec} font-semibold drop-shadow-md bg-black/30 px-2 py-1 rounded-lg`}>
                     总观看次数: {totalViews.toLocaleString()}
                     {totalViews >= 1000 && (
                       <div className="-mt-1 -mr-1 fire-icon-container">
                         <FireIcon />
                       </div>
                     )}
-                  </p>
+                  </div>
 
                   {actorRank > 0 && (
                     <p className={`text-base font-semibold drop-shadow-md px-2 py-1 rounded-lg text-white ${actorRankColors[actorRank - 1]}`}>
